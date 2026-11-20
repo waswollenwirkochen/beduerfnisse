@@ -1127,8 +1127,21 @@ function catPicker(key,sections,sel,cls,onToggle,extraKind){
         touch();if(!sel.includes(t))onToggle(t);else rr()})),
     sel.length?h('div',{class:'small muted mt'},'Gewählt: ',sel.join(', ')):null);
 }
-const feelSections=pos=>pos===false?[[null,Object.entries(GF.unerfuellt)]]:[['unangenehm',Object.entries(GF.unerfuellt)],['angenehm',Object.entries(GF.erfuellt)]];
-const needSections=()=>[[null,[['Deine',live(S.data.needs).map(n=>n.name)],...Object.entries(GF.beduerfnisse)]]];
+function wall(sections,sel,cls,onToggle,extraKind){
+  S.data.gfkExtra=S.data.gfkExtra||{feel:[],need:[]};
+  const extras=live(S.data.gfkExtra[extraKind]).map(x=>x.name);
+  const grp=(g,words)=>h('div',{style:'margin:8px 0 2px'},h('div',{class:'small faint',style:'margin-bottom:4px'},g),
+    h('div',{class:'chips'},words.map(w=>chip(w,sel.includes(w),()=>onToggle(w),'sm '+cls))));
+  return h('div',null,
+    sections.map(([title,groups])=>[title?h('div',{class:'small',style:'margin:12px 0 0;color:var(--amber2);letter-spacing:.04em;text-transform:uppercase;font-size:.72rem'},title):null,groups.map(([g,w])=>grp(g,w))]),
+    extras.length?grp('Eigene',extras):null,
+    adder('Eigenes Wort hinzufügen …',t=>{
+      if(!S.data.gfkExtra[extraKind].some(x=>x.name.toLowerCase()===t.toLowerCase()&&!x.del))S.data.gfkExtra[extraKind].push({id:uid(),name:t,u:now()});
+      touch();if(!sel.includes(t))onToggle(t);else rr()}),
+    sel.length?h('div',{class:'small muted mt'},'Gewählt: ',sel.join(', ')):null);
+}
+const feelSections=pos=>pos===false?[[null,Object.entries(GF.unerfuellt)]]:[['Wenn Bedürfnisse unerfüllt sind',Object.entries(GF.unerfuellt)],['Wenn Bedürfnisse erfüllt sind',Object.entries(GF.erfuellt)]];
+const needSections=()=>[['Deine Kernbedürfnisse',[['',live(S.data.needs).map(n=>n.name)]]],['Alle Bedürfnisse',Object.entries(GF.beduerfnisse)]];
 function allFeel(){return Object.values(GF.unerfuellt).flat().concat(Object.values(GF.erfuellt).flat())}
 function allNeeds(){const own=live(S.data.needs).map(n=>n.name);return [...new Set([...own,...Object.values(GF.beduerfnisse).flat()])]}
 function gfkPractice(){
@@ -1139,9 +1152,9 @@ function miniCheck(){
   const sentence=(M.feel.length||M.need.length)?`Ich bin gerade ${M.feel.join(' und ')||'…'}, weil mir ${M.need.join(' und ')||'…'} wichtig ist.`:'';
   return h('div',{class:'card'},h('details',{class:'acc',open:M.open?true:null,ontoggle:e=>M.open=e.target.open},
     h('summary',null,'⏱️ Mini-Check (30 Sekunden)'),
-    h('p',{class:'sub'},'Was fühle ich gerade? Was brauche ich? Erst Kategorie antippen, dann das Wort.'),
-    h('label',{class:'lbl'},'Gefühl'),catPicker('miniF',feelSections(),M.feel,'lilac',f=>{M.feel=toggle(M.feel,f);rr()},'feel'),
-    h('label',{class:'lbl'},'Bedürfnis'),catPicker('miniN',needSections(),M.need,'moss',n=>{M.need=toggle(M.need,n);rr()},'need'),
+    h('p',{class:'sub'},'Was fühle ich gerade? Was brauche ich? Lass den Blick über die Wörter wandern – welches trifft es?'),
+    h('label',{class:'lbl'},'Gefühl'),wall(feelSections(),M.feel,'lilac',f=>{M.feel=toggle(M.feel,f);rr()},'feel'),
+    h('label',{class:'lbl'},'Bedürfnis'),wall(needSections(),M.need,'moss',n=>{M.need=toggle(M.need,n);rr()},'need'),
     sentence&&h('div',{class:'gfk-prev'},sentence),
     sentence&&h('button',{class:'btn sm mt',onclick:()=>{const x=getDay(today());x.checks.push({id:uid(),type:'mini',text:sentence,t:now()});touch(x);S.mini={feel:[],need:[],open:true};S.cats.miniF=S.cats.miniN=null;rr();toast('Im Tagebuch gespeichert ✓')}},'Im Tagebuch speichern')));
 }
@@ -1153,8 +1166,8 @@ function selfEmpathy(){
     h('p',{class:'sub'},'Zwei Minuten für dich – ohne Urteil.'),
     h('label',{class:'lbl'},'1 · Was ist passiert? (nur Beobachtung)'),F('obs','Wir haben …'),
     h('label',{class:'lbl'},'2 · Was sagt die strenge Stimme in mir? (darf raus)'),F('critic','„Ich hätte …“'),
-    h('label',{class:'lbl'},'3 · Was fühle ich darunter?'),catPicker('seF',feelSections(false),E.feel||[],'lilac',f=>{S.se.feel=toggle(S.se.feel,f);rr()},'feel'),
-    h('label',{class:'lbl'},'4 · Welches Bedürfnis kam zu kurz?'),catPicker('seN',needSections(),E.need||[],'moss',n=>{S.se.need=toggle(S.se.need,n);rr()},'need'),
+    h('label',{class:'lbl'},'3 · Was fühle ich darunter?'),wall(feelSections(false),E.feel||[],'lilac',f=>{S.se.feel=toggle(S.se.feel,f);rr()},'feel'),
+    h('label',{class:'lbl'},'4 · Welches Bedürfnis kam zu kurz?'),wall(needSections(),E.need||[],'moss',n=>{S.se.need=toggle(S.se.need,n);rr()},'need'),
     h('label',{class:'lbl'},'5 · Was kann ich mir jetzt geben – oder was sage ich nächstes Mal?'),F('next','…'),
     (E.feel||[]).length||(E.need||[]).length?h('div',{class:'gfk-prev'},`Ich bin ${(E.feel||[]).join(' und ')||'…'}, weil mir ${(E.need||[]).join(' und ')||'…'} wichtig ist. Das ist okay – und es zählt.`):null,
     h('button',{class:'btn sm mt',onclick:()=>{
