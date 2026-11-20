@@ -1,0 +1,1175 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://api.github.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#0b1419">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bedürfnisse">
+<title>Bedürfnis-Diary</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1d22'/%3E%3Ccircle cx='44' cy='18' r='8' fill='%23e9b872'/%3E%3Ccircle cx='48' cy='15' r='7' fill='%230f1d22'/%3E%3Cpath d='M20 52 L30 30 L40 52Z M8 54 L18 36 L28 54Z M34 54 L44 38 L56 54Z' fill='%2393b48b'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230f1d22'/%3E%3Ccircle cx='44' cy='18' r='8' fill='%23e9b872'/%3E%3Ccircle cx='48' cy='15' r='7' fill='%230f1d22'/%3E%3Cpath d='M20 52 L30 30 L40 52Z M8 54 L18 36 L28 54Z M34 54 L44 38 L56 54Z' fill='%2393b48b'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0b1419; --card:rgba(22,34,36,.78); --card2:rgba(34,50,50,.7);
+  --line:rgba(241,232,214,.11); --text:#f1e8d6; --muted:#a9a290; --faint:#7d7868;
+  --amber:#e9b872; --amber2:#f4d29c; --moss:#93b48b; --lilac:#b7a7e3; --rose:#e39c8f; --sky:#8fb6d8;
+  --r:18px; --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.5}
+body{min-height:100vh;overflow-x:hidden}
+#sky{position:fixed;inset:0;z-index:0;pointer-events:none}
+#app{position:relative;z-index:1;max-width:640px;margin:0 auto;min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+input,textarea,select{font:inherit;color:var(--text)}
+h1,h2,h3{font-family:var(--serif);font-weight:600;letter-spacing:.01em;margin:0}
+a{color:var(--amber)}
+
+/* header */
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:calc(10px + var(--safe-t)) 16px 10px;
+  background:linear-gradient(180deg,rgba(11,20,25,.96),rgba(11,20,25,.82));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top h1{font-size:1.2rem;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top h1 small{font-family:var(--sans);font-size:.75rem;color:var(--muted);font-weight:400;margin-left:6px}
+.iconbtn{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:1.1rem;color:var(--muted)}
+.iconbtn:active{background:var(--card2)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--faint);display:inline-block}
+.dot.ok{background:var(--moss)} .dot.pending,.dot.syncing{background:var(--amber)} .dot.error{background:var(--rose)}
+.dot.syncing{animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+
+main{padding:14px 14px calc(96px + var(--safe-b))}
+/* nav */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;justify-content:center;
+  background:linear-gradient(0deg,rgba(9,16,19,.98),rgba(11,20,25,.9));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);padding-bottom:var(--safe-b)}
+nav.tabs .in{display:flex;width:100%;max-width:640px}
+nav.tabs button{flex:1;padding:9px 0 8px;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:.7rem;color:var(--faint)}
+nav.tabs button .i{font-size:1.25rem;filter:grayscale(.7) opacity(.75);transition:.2s}
+nav.tabs button.on{color:var(--amber2)}
+nav.tabs button.on .i{filter:none;transform:translateY(-1px)}
+
+/* cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.card h2{font-size:1.08rem;margin-bottom:4px}
+.card h3{font-size:.98rem;margin:14px 0 6px}
+.sub{color:var(--muted);font-size:.86rem;margin:0 0 10px}
+.muted{color:var(--muted)} .faint{color:var(--faint)} .small{font-size:.84rem}
+.row{display:flex;gap:8px;align-items:center}
+.row.wrap{flex-wrap:wrap}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.grow{flex:1;min-width:0}
+hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{border:1px solid var(--line);background:rgba(241,232,214,.04);border-radius:999px;padding:7px 13px;font-size:.92rem;line-height:1.2;color:var(--text);transition:background .15s,border-color .15s}
+.chip:active{transform:scale(.97)}
+.chip.on{background:rgba(233,184,114,.18);border-color:rgba(233,184,114,.6);color:var(--amber2)}
+.chip.on.moss{background:rgba(147,180,139,.2);border-color:rgba(147,180,139,.65);color:#cfe3c9}
+.chip.on.rose{background:rgba(227,156,143,.18);border-color:rgba(227,156,143,.6);color:#f2c6bd}
+.chip.on.lilac{background:rgba(183,167,227,.2);border-color:rgba(183,167,227,.6);color:#ddd3f7}
+.chip.add{border-style:dashed;color:var(--muted)}
+.chip.sm{padding:5px 10px;font-size:.84rem}
+.chip .x{margin-left:6px;color:var(--rose)}
+.chip .n{font-size:.72rem;color:var(--faint);margin-left:5px}
+
+/* inputs */
+.field{width:100%;background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:12px;padding:10px 12px;outline:none}
+.field:focus{border-color:rgba(233,184,114,.55)}
+textarea.field{resize:vertical;min-height:70px}
+label.lbl{display:block;font-size:.82rem;color:var(--muted);margin:12px 0 5px}
+.btn{background:var(--amber);color:#2a1e0c;font-weight:600;border-radius:12px;padding:11px 16px}
+.btn:active{filter:brightness(.92)}
+.btn.ghost{background:rgba(241,232,214,.06);color:var(--text);border:1px solid var(--line);font-weight:500}
+.btn.danger{background:rgba(227,156,143,.15);color:var(--rose);border:1px solid rgba(227,156,143,.4)}
+.btn.full{width:100%}
+.btn.sm{padding:7px 12px;font-size:.88rem;border-radius:10px}
+.link{color:var(--amber);font-size:.88rem;padding:4px 0}
+.addrow{display:flex;gap:6px;margin-top:8px}
+.addrow .field{padding:8px 11px}
+.addrow .btn{padding:8px 13px}
+
+/* scale */
+.scale{display:grid;grid-template-columns:repeat(11,1fr);gap:4px}
+.scale button{aspect-ratio:1;border-radius:50%;border:1px solid var(--line);font-size:.85rem;color:var(--muted);background:rgba(241,232,214,.03);max-width:42px;justify-self:center;width:100%}
+.scale button.on{background:var(--amber);color:#2a1e0c;border-color:var(--amber);font-weight:700;box-shadow:0 0 14px rgba(233,184,114,.45)}
+.scale-l{display:flex;justify-content:space-between;font-size:.74rem;color:var(--faint);margin-top:5px}
+
+/* need panel */
+.npanel{margin-top:10px;border-left:2px solid rgba(147,180,139,.5);padding:4px 0 4px 12px}
+.npanel .t{font-weight:600;font-size:.92rem;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+
+/* segmented */
+.seg{display:flex;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:14px;padding:3px;margin-bottom:12px;gap:2px}
+.seg button{flex:1;padding:8px 4px;border-radius:11px;font-size:.86rem;color:var(--muted)}
+.seg button.on{background:var(--card2);color:var(--amber2)}
+.seg3{display:flex;gap:6px}
+.seg3 button{flex:1;padding:10px 6px;border-radius:12px;border:1px solid var(--line);font-size:.88rem;background:rgba(241,232,214,.03)}
+.seg3 button.on{border-color:rgba(233,184,114,.6);background:rgba(233,184,114,.15);color:var(--amber2)}
+
+/* date nav */
+.datenav{display:flex;align-items:center;justify-content:space-between;margin:2px 0 12px}
+.datenav .d{text-align:center}
+.datenav .d b{font-family:var(--serif);font-size:1.25rem;font-weight:600;display:block}
+.datenav .d span{font-size:.8rem;color:var(--muted)}
+.datenav button.arr{width:42px;height:42px;border-radius:50%;font-size:1.3rem;color:var(--muted);border:1px solid var(--line)}
+.datenav button.arr:disabled{opacity:.25}
+
+/* affirmation */
+.aff{background:radial-gradient(120% 140% at 85% 0%,rgba(183,167,227,.22),transparent 60%),var(--card);border-color:rgba(183,167,227,.25);text-align:center;padding:18px 18px 14px;cursor:pointer}
+.aff p{font-family:var(--serif);font-size:1.12rem;margin:0;color:#ece4fb;line-height:1.45}
+.aff small{display:block;margin-top:8px;font-size:.72rem;color:var(--faint)}
+
+/* list items */
+.item{border-top:1px solid var(--line);padding:10px 0}
+.item:first-child{border-top:0}
+.item .meta{font-size:.78rem;color:var(--faint)}
+.gfk-prev{font-family:var(--serif);font-style:italic;color:#e6dcc6;background:rgba(233,184,114,.07);border-left:2px solid rgba(233,184,114,.5);padding:8px 12px;border-radius:0 10px 10px 0;margin-top:8px}
+.check{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line)}
+.check:first-child{border-top:0}
+.box{flex:none;width:22px;height:22px;border-radius:7px;border:1.5px solid var(--muted);display:grid;place-items:center;font-size:.8rem;margin-top:1px}
+.box.on{background:var(--moss);border-color:var(--moss);color:#14201a}
+
+/* stats */
+.bars .b{display:grid;grid-template-columns:minmax(90px,38%) 1fr;gap:8px;align-items:center;margin:7px 0;font-size:.86rem}
+.bars .track{display:flex;flex-direction:column;gap:3px}
+.bars .bar{height:8px;border-radius:5px;min-width:2px}
+.bars .bar.m{background:var(--moss)} .bars .bar.r{background:var(--rose);opacity:.85}
+.big{font-family:var(--serif);font-size:1.9rem;color:var(--amber2);line-height:1.1}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center}
+.kpi .v{font-family:var(--serif);font-size:1.45rem;color:var(--amber2)}
+.kpi .l{font-size:.72rem;color:var(--muted);line-height:1.25}
+.legend{display:flex;gap:14px;font-size:.76rem;color:var(--muted);margin-top:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+/* week */
+.days7{display:flex;gap:6px;margin-top:8px}
+.days7 div{flex:1;text-align:center;font-size:.7rem;color:var(--faint)}
+.days7 div i{display:block;height:26px;border-radius:8px;border:1px solid var(--line);margin-bottom:3px;background:rgba(241,232,214,.03)}
+.days7 div i.on{background:rgba(147,180,139,.55);border-color:var(--moss)}
+.days7 div i.sh{background:rgba(227,156,143,.35);border-color:rgba(227,156,143,.6)}
+.block{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.block:first-child{border-top:0}
+.block .when{font-size:.78rem;color:var(--amber2);min-width:64px;line-height:1.25}
+.st{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);font-size:.95rem;color:var(--muted)}
+.st.ja{background:rgba(147,180,139,.3);border-color:var(--moss);color:#d6ead0}
+.st.nein{background:rgba(227,156,143,.25);border-color:var(--rose);color:#f5cdc5}
+
+/* gfk text */
+.prose p{margin:0 0 10px}
+.prose ul{margin:0 0 10px;padding-left:20px}
+.prose li{margin:3px 0}
+.prose b{color:var(--amber2);font-weight:600}
+.prose .ex{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;background:rgba(0,0,0,.2);border-radius:12px;padding:10px 12px;margin:8px 0 12px;font-size:.92rem}
+.prose .ex .no{color:var(--rose)} .prose .ex .yes{color:var(--moss)}
+.step{display:flex;gap:12px;align-items:flex-start;margin:10px 0}
+.step .num{flex:none;width:30px;height:30px;border-radius:50%;background:rgba(233,184,114,.16);border:1px solid rgba(233,184,114,.5);color:var(--amber2);display:grid;place-items:center;font-family:var(--serif);font-weight:700}
+details.acc{border-top:1px solid var(--line);padding:4px 0}
+details.acc:first-of-type{border-top:0}
+details.acc summary{cursor:pointer;list-style:none;padding:10px 0;font-family:var(--serif);font-size:1.02rem;display:flex;justify-content:space-between;align-items:center}
+details.acc summary::-webkit-details-marker{display:none}
+details.acc summary::after{content:"＋";color:var(--muted);font-family:var(--sans)}
+details.acc[open] summary::after{content:"－"}
+.formula{font-family:var(--serif);font-size:1.02rem;background:rgba(233,184,114,.08);border:1px solid rgba(233,184,114,.25);border-radius:14px;padding:12px 14px;line-height:1.7}
+.formula em{color:var(--amber2);font-style:normal}
+.pseudo{display:grid;grid-template-columns:1fr;gap:6px}
+.pseudo div{background:rgba(0,0,0,.2);border-radius:10px;padding:8px 10px;font-size:.88rem}
+.pseudo b{color:var(--rose)}
+.streak{display:inline-flex;align-items:center;gap:6px;background:rgba(233,184,114,.12);border:1px solid rgba(233,184,114,.35);border-radius:999px;padding:4px 11px;font-size:.82rem;color:var(--amber2)}
+
+/* lock */
+.lock{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:30px 22px calc(30px + var(--safe-b))}
+.lock .moon{width:84px;height:84px;margin:0 auto 18px;border-radius:50%;box-shadow:inset -18px -6px 0 0 var(--amber2);filter:drop-shadow(0 0 24px rgba(233,184,114,.35));transform:rotate(-20deg)}
+.lock h1{text-align:center;font-size:1.7rem;margin-bottom:6px}
+.lock p.c{text-align:center;color:var(--muted);margin:0 0 22px;font-size:.93rem}
+.err{color:var(--rose);font-size:.88rem;margin-top:8px;min-height:1.2em}
+.toast{position:fixed;left:50%;bottom:calc(84px + var(--safe-b));transform:translateX(-50%);background:#2a3a37;border:1px solid var(--line);color:var(--text);padding:9px 16px;border-radius:999px;font-size:.88rem;z-index:20;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.hidden-user{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.center{text-align:center}
+.mt{margin-top:10px} .mt2{margin-top:16px} .mb0{margin-bottom:0}
+</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+'use strict';
+/* =========================================================================
+   Bedürfnis-Diary – alle persönlichen Daten werden im Browser mit AES-256-GCM
+   verschlüsselt (Schlüssel aus Passphrase via PBKDF2-SHA256). Dieser Code
+   enthält keine persönlichen Inhalte.
+   ========================================================================= */
+
+/* ---------- Himmel & Wald ---------- */
+(function sky(){
+  const c=document.getElementById('sky'), x=c.getContext('2d');
+  function draw(){
+    const w=innerWidth,h=innerHeight,dpr=Math.min(devicePixelRatio||1,2);
+    c.width=w*dpr;c.height=h*dpr;c.style.width=w+'px';c.style.height=h+'px';x.setTransform(dpr,0,0,dpr,0,0);
+    const g=x.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,'#09111d');g.addColorStop(.45,'#0d1b22');g.addColorStop(1,'#14251f');
+    x.fillStyle=g;x.fillRect(0,0,w,h);
+    const neb=x.createRadialGradient(w*.8,h*.12,0,w*.8,h*.12,w*.7);
+    neb.addColorStop(0,'rgba(183,167,227,.10)');neb.addColorStop(1,'rgba(183,167,227,0)');
+    x.fillStyle=neb;x.fillRect(0,0,w,h);
+    let s=7;const rnd=()=>{s=(s*16807)%2147483647;return s/2147483647};
+    for(let i=0;i<Math.round(w*h/5200);i++){
+      const px=rnd()*w,py=rnd()*h*.72,r=rnd()*1.1+.2,a=rnd()*.6+.15;
+      x.fillStyle=`rgba(${rnd()>.8?'244,210,156':'241,232,214'},${a*(1-py/h)})`;
+      x.beginPath();x.arc(px,py,r,0,7);x.fill();
+    }
+    const layers=[[.80,'rgba(20,38,32,.55)',34],[.86,'rgba(14,28,24,.8)',26],[.92,'rgba(9,19,16,.95)',20]];
+    layers.forEach(([base,col,sz])=>{
+      x.fillStyle=col;x.beginPath();x.moveTo(0,h);
+      for(let px=-10;px<w+20;px+=sz*.55){
+        const th=sz*(1.3+rnd()*1.6), by=h*base+rnd()*10;
+        x.lineTo(px,by);x.lineTo(px+sz*.28,by-th);x.lineTo(px+sz*.56,by);
+      }
+      x.lineTo(w,h);x.closePath();x.fill();
+    });
+  }
+  draw();let t;addEventListener('resize',()=>{clearTimeout(t);t=setTimeout(draw,200)});
+})();
+
+/* ---------- Helfer ---------- */
+const $=s=>document.querySelector(s);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const now=()=>Date.now();
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today=()=>ymd(new Date());
+const parse=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
+const addDays=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return ymd(d)};
+const WD=['So','Mo','Di','Mi','Do','Fr','Sa'];
+const WDL=['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+const MON=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const fmtLong=s=>{const d=parse(s);return `${d.getDate()}. ${MON[d.getMonth()]}`};
+const fmtShort=s=>{const d=parse(s);return `${WD[d.getDay()]}, ${d.getDate()}.${d.getMonth()+1}.`};
+function isoWeek(s){const d=parse(s);const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);const y=t.getUTCFullYear();const w=Math.ceil(((t-Date.UTC(y,0,1))/864e5+1)/7);return `${y}-W${pad(w)}`}
+function weekStart(s){const d=parse(s);const day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return ymd(d)}
+const clone=o=>JSON.parse(JSON.stringify(o));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function h(t,a,...kids){
+  const e=document.createElement(t);
+  if(a)for(const k in a){const v=a[k];if(v==null||v===false)continue;
+    if(k==='class')e.className=v;else if(k==='style')e.style.cssText=v;
+    else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);
+    else if(k==='html')e.innerHTML=v;
+    else if(k==='value')e.value=v;else if(k==='checked')e.checked=v;
+    else e.setAttribute(k,v===true?'':v);}
+  for(const c of kids.flat(9)){if(c==null||c===false)continue;e.append(c.nodeType?c:String(c))}
+  return e;
+}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),1800)}
+const live=arr=>(arr||[]).filter(x=>!x.del);
+
+/* ---------- Krypto ---------- */
+const TE=new TextEncoder(),TD=new TextDecoder();
+const ITER=400000;
+function b64(u8){let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s)}
+function unb64(s){const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
+async function deriveKey(pass,saltB64,iter){
+  const base=await crypto.subtle.importKey('raw',TE.encode(pass),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt:unb64(saltB64),iterations:iter||ITER,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function encWith(key,obj){
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,TE.encode(JSON.stringify(obj))));
+  return {iv:b64(iv),ct:b64(ct)};
+}
+async function decWith(key,env){
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(env.iv)},key,unb64(env.ct));
+  return JSON.parse(TD.decode(pt));
+}
+async function makeEnvelope(obj){const e=await encWith(S.key,obj);return {app:'beduerfnis-diary',v:1,kdf:'PBKDF2-SHA256',iter:CFG.iter,salt:CFG.salt,...e}}
+
+/* ---------- Speicher ---------- */
+const LS_CFG='bd.cfg',LS_VAULT='bd.vault';
+let CFG=null;
+function loadCfg(){try{CFG=JSON.parse(localStorage.getItem(LS_CFG)||'null')}catch(e){CFG=null}}
+function saveCfg(){localStorage.setItem(LS_CFG,JSON.stringify(CFG))}
+const S={key:null,token:null,data:null,view:'heute',date:today(),week:isoWeek(today()),ichTab:'rueckblick',gfkTab:'ueberblick',
+  range:30,affIdx:null,baq:{},logDraft:null,blockDraft:null,exShift:0,editAct:{},mini:{feel:[],need:[]},se:null,prep:{},
+  dirty:false,sync:{state:'off',last:0,err:'',sha:null}};
+
+const DEFAULT=()=>({
+  v:1,created:now(),updatedAt:now(),imported:false,
+  profile:{name:'',partner:''},
+  needs:[['Ruhe','🌙'],['Autonomie','🧭'],['Bewegung','🏃'],['Nähe','🤍'],['Freude','✨'],['Zugehörigkeit','🤝']].map(([name,icon])=>({id:uid(),name,icon,u:1})),
+  signals:['Verspannungen','Stress','gereizt','unruhig','müde'].map(name=>({id:uid(),name,u:1})),
+  feelings:['enttäuscht','frustriert','wütend','traurig','schuldbewusst','unter Druck','erleichtert'].map(name=>({id:uid(),name,u:1})),
+  contexts:['Tagesplanung','Essen','Freizeit','Urlaub','Feiern'].map(name=>({id:uid(),name,u:1})),
+  people:['Partner*in','Freund*innen','Familie','Gruppe'].map(name=>({id:uid(),name,u:1})),
+  activities:{},days:{},logs:[],weeks:{},affirmations:[],talk:[]
+});
+
+let localTimer=null,syncTimer=null;
+function touch(dayObj){
+  if(dayObj)dayObj.u=now();
+  S.data.updatedAt=now();S.dirty=true;
+  clearTimeout(localTimer);localTimer=setTimeout(saveLocal,500);
+  if(hasRemote()){setSync('pending');clearTimeout(syncTimer);syncTimer=setTimeout(syncNow,4000)}
+}
+async function saveLocal(){
+  if(!S.key||!S.data)return;
+  const env=await makeEnvelope(S.data);
+  localStorage.setItem(LS_VAULT,JSON.stringify(env));
+  return env;
+}
+function getDay(d,create=true){
+  let x=S.data.days[d];
+  if(!x&&create){x=S.data.days[d]={u:now(),scale:null,met:{},short:[],signals:[],good:[],stood:null,note:'',checks:[],ex:null}}
+  return x;
+}
+function getWeek(k,create=true){
+  let w=S.data.weeks[k];
+  if(!w&&create){w=S.data.weeks[k]={focus:null,focusNote:'',blocks:[]}}
+  return w;
+}
+const needById=id=>S.data.needs.find(n=>n.id===id);
+const nm=(list,id)=>(S.data[list].find(x=>x.id===id)||{}).name||'?';
+
+/* ---------- GitHub-Sync ---------- */
+const hasRemote=()=>!!(CFG&&CFG.owner&&CFG.repo&&S.token);
+function setSync(state,err){S.sync.state=state;if(err!==undefined)S.sync.err=err;const d=$('#syncdot');if(d){d.className='dot '+state;d.title=syncLabel()}}
+function syncLabel(){const s=S.sync;return {off:'Kein Sync eingerichtet – nur auf diesem Gerät',ok:'Synchronisiert',pending:'Änderungen warten auf Sync',syncing:'Synchronisiere …',error:'Sync-Fehler: '+s.err}[s.state]||''}
+function apiUrl(){return `https://api.github.com/repos/${encodeURIComponent(CFG.owner)}/${encodeURIComponent(CFG.repo)}/contents/${CFG.path||'diary.enc.json'}`}
+async function gh(method,body,accept,token){
+  const r=await fetch(apiUrl()+(method==='GET'?'?t='+now():''),{method,cache:'no-store',
+    headers:{Authorization:'Bearer '+(token||S.token),Accept:accept||'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'},
+    body:body?JSON.stringify(body):undefined});
+  return r;
+}
+async function ghGet(token){
+  const r=await gh('GET',null,null,token);
+  if(r.status===404)return null;
+  if(r.status===401)throw new Error('Token ungültig oder abgelaufen');
+  if(r.status===403)throw new Error('Kein Zugriff – Token-Rechte prüfen');
+  if(!r.ok)throw new Error('GitHub antwortet mit '+r.status);
+  const j=await r.json();
+  let txt;
+  if(j.content){txt=TD.decode(unb64(j.content.replace(/\s/g,'')))}
+  else{const r2=await gh('GET',null,'application/vnd.github.raw+json',token);txt=await r2.text()}
+  return {sha:j.sha,env:JSON.parse(txt)};
+}
+async function ghPut(env,sha,token){
+  const body={message:'Tagebuch-Update '+new Date().toISOString().slice(0,16),content:btoa(JSON.stringify(env))};
+  if(sha)body.sha=sha;
+  const r=await gh('PUT',body,null,token);
+  if(r.status===409||r.status===422)return 'conflict';
+  if(!r.ok)throw new Error('Speichern auf GitHub fehlgeschlagen ('+r.status+')');
+  const j=await r.json();return j.content&&j.content.sha;
+}
+function isIdArr(a){return Array.isArray(a)&&a.length>0&&a.every(x=>x&&typeof x==='object'&&'id' in x)}
+function pick(x,y){if('u' in x||'u' in y)return (x.u||0)>=(y.u||0)?x:y;if('n' in x||'n' in y)return (x.n||0)>=(y.n||0)?x:y;return y}
+function merge(a,b){
+  if(a===undefined)return b;if(b===undefined)return a;
+  if(Array.isArray(a)&&Array.isArray(b)){
+    if((isIdArr(a)||!a.length)&&(isIdArr(b)||!b.length)){
+      const m=new Map();a.forEach(x=>m.set(x.id,x));b.forEach(y=>{const x=m.get(y.id);m.set(y.id,x?pick(x,y):y)});return [...m.values()];
+    }
+    return b;
+  }
+  if(a&&b&&typeof a==='object'&&typeof b==='object'){
+    if('u' in a||'u' in b)return (a.u||0)>(b.u||0)?a:b;
+    const o={};new Set([...Object.keys(a),...Object.keys(b)]).forEach(k=>o[k]=merge(a[k],b[k]));return o;
+  }
+  return b;
+}
+function mergeDocs(local,remote){
+  const [older,newer]=(local.updatedAt||0)>(remote.updatedAt||0)?[remote,local]:[local,remote];
+  const m=merge(older,newer);m.updatedAt=Math.max(local.updatedAt||0,remote.updatedAt||0);return m;
+}
+let syncing=null;
+async function syncNow(manual){
+  if(!hasRemote()||!S.key){setSync('off');return}
+  if(syncing)return syncing;
+  syncing=(async()=>{
+    setSync('syncing');
+    try{
+      for(let attempt=0;attempt<3;attempt++){
+        const r=await ghGet();
+        let changedFromRemote=false;
+        if(r){
+          if(r.env.salt!==CFG.salt)throw new Error('Daten auf GitHub nutzen eine andere Passphrase');
+          const remote=await decWith(S.key,r.env);
+          const before=JSON.stringify(S.data);
+          const merged=mergeDocs(S.data,remote);
+          changedFromRemote=JSON.stringify(merged)!==before;
+          S.data=merged;
+          if(JSON.stringify(merged)===JSON.stringify(remote)){S.dirty=false;S.sync.sha=r.sha;await saveLocal();
+            if(changedFromRemote)softRender();break}
+        }
+        const env=await makeEnvelope(S.data);
+        const res=await ghPut(env,r&&r.sha);
+        if(res==='conflict')continue;
+        S.sync.sha=res;S.dirty=false;localStorage.setItem(LS_VAULT,JSON.stringify(env));
+        if(changedFromRemote)softRender();
+        break;
+      }
+      S.sync.last=now();setSync('ok','');if(manual)toast('Synchronisiert ✓');
+    }catch(e){console.warn(e);setSync('error',e.message||String(e));if(manual)toast('Sync-Fehler: '+(e.message||e))}
+    finally{syncing=null}
+  })();
+  return syncing;
+}
+function softRender(){const a=document.activeElement;if(a&&/INPUT|TEXTAREA/.test(a.tagName))return;render()}
+
+/* ---------- Sperre ---------- */
+let lastAct=now(),hiddenAt=0;
+['pointerdown','keydown','scroll'].forEach(ev=>addEventListener(ev,()=>lastAct=now(),{passive:true}));
+const lockMs=()=>((CFG&&CFG.lockMin)||5)*60000;
+setInterval(()=>{if(S.key&&now()-lastAct>lockMs())lock()},15000);
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){hiddenAt=now();if(S.key){saveLocal();if(S.dirty&&hasRemote())syncNow()}}
+  else if(S.key&&hiddenAt&&now()-hiddenAt>lockMs())lock();
+});
+async function lock(){
+  if(!S.key)return;
+  clearTimeout(localTimer);clearTimeout(syncTimer);
+  try{
+    const env=await saveLocal();
+    if(S.dirty&&hasRemote()&&env){const tok=S.token,sha=S.sync.sha;ghPut(env,sha,tok).catch(()=>{})}
+  }catch(e){}
+  S.key=null;S.token=null;S.data=null;S.logDraft=null;S.se=null;S.prep={};setSync('off');
+  render();
+}
+
+/* ---------- Start / Einrichtung ---------- */
+function render(){
+  const app=$('#app');const y=scrollY;
+  if(!S.key){app.replaceChildren(CFG&&localStorage.getItem(LS_VAULT)?vLock():vSetup());return}
+  const views={heute:vHeute,log:vLog,woche:vWoche,ich:vIch,gfk:vGfk,settings:vSettings};
+  const titles={heute:'Heute',log:'Nachgeben-Log',woche:'Woche',ich:'Ich',gfk:'GFK',settings:'Einstellungen'};
+  app.replaceChildren(
+    h('div',{class:'top'},
+      h('h1',null,titles[S.view]),
+      h('span',{id:'syncdot',class:'dot '+S.sync.state,title:syncLabel(),style:'margin-right:4px'}),
+      h('button',{class:'iconbtn',title:'Einstellungen','aria-label':'Einstellungen',onclick:()=>go(S.view==='settings'?'heute':'settings')},'⚙︎'),
+      h('button',{class:'iconbtn',title:'Sperren','aria-label':'Sperren',onclick:lock},'🔒')),
+    h('main',null,views[S.view]()),
+    h('nav',{class:'tabs'},h('div',{class:'in'},
+      [['heute','🌙','Heute'],['log','📝','Log'],['woche','🗓️','Woche'],['ich','🌱','Ich'],['gfk','🕊️','GFK']].map(([v,i,l])=>
+        h('button',{class:S.view===v?'on':'',onclick:()=>go(v)},h('span',{class:'i'},i),l))))
+  );
+  scrollTo(0,y);
+}
+function go(v){S.view=v;render();scrollTo(0,0)}
+function rr(){render()}
+
+function vLock(){
+  let pass='';const err=h('div',{class:'err'});
+  const inp=h('input',{class:'field',type:'password',autocomplete:'current-password',placeholder:'Passphrase',oninput:e=>pass=e.target.value});
+  async function go2(){
+    err.textContent='Entsperre …';
+    try{
+      const key=await deriveKey(pass,CFG.salt,CFG.iter);
+      const data=await decWith(key,JSON.parse(localStorage.getItem(LS_VAULT)));
+      S.key=key;S.data=data;S.token=CFG.tokenEnv?await decWith(key,CFG.tokenEnv):null;
+      S.date=today();S.week=isoWeek(today());S.view='heute';lastAct=now();
+      render();if(hasRemote())syncNow();
+    }catch(e){err.textContent='Passphrase stimmt nicht.';inp.select()}
+  }
+  setTimeout(()=>inp.focus(),50);
+  return h('div',{class:'lock'},
+    h('div',{class:'moon'}),
+    h('h1',null,'Bedürfnis-Diary'),
+    h('p',{class:'c'},'Deine Einträge sind verschlüsselt.'),
+    h('form',{onsubmit:e=>{e.preventDefault();go2()}},
+      h('input',{class:'hidden-user',type:'text',autocomplete:'username',value:'beduerfnis-diary',tabindex:'-1','aria-hidden':'true'}),
+      inp,h('button',{class:'btn full mt',type:'submit'},'Entsperren'),err),
+    h('button',{class:'link mt2 center',style:'display:block;margin:28px auto 0;color:var(--faint)',onclick:()=>{
+      if(confirm('Lokale Daten auf diesem Gerät löschen? Daten auf GitHub bleiben erhalten.')){localStorage.removeItem(LS_VAULT);localStorage.removeItem(LS_CFG);CFG=null;render()}}},'Auf diesem Gerät zurücksetzen'));
+}
+
+function vSetup(){
+  const f={p1:'',p2:'',owner:'waswollenwirkochen',repo:'beduerfnisse-data',token:''};
+  const err=h('div',{class:'err'});
+  const I=(k,ph,type='text',ac='off')=>h('input',{class:'field',type,placeholder:ph,value:f[k],autocomplete:ac,autocapitalize:'off',spellcheck:'false',oninput:e=>f[k]=e.target.value.trim()});
+  async function submit(){
+    if(f.p1.length<8){err.textContent='Bitte mindestens 8 Zeichen – lieber ein Satz oder vier Wörter.';return}
+    if(f.p1!==f.p2){err.textContent='Die beiden Passphrasen stimmen nicht überein.';return}
+    err.textContent='Richte ein …';
+    try{
+      CFG={owner:f.owner,repo:f.repo,path:'diary.enc.json',salt:null,iter:ITER,tokenEnv:null,lockMin:5};
+      let remote=null;
+      if(f.token&&f.owner&&f.repo){remote=await ghGet(f.token)}
+      if(remote){
+        CFG.salt=remote.env.salt;CFG.iter=remote.env.iter||ITER;
+        const key=await deriveKey(f.p1,CFG.salt,CFG.iter);
+        let data;try{data=await decWith(key,remote.env)}catch(e){throw new Error('Auf GitHub liegen schon Daten – aber mit einer anderen Passphrase.')}
+        S.key=key;S.data=data;S.sync.sha=remote.sha;
+      }else{
+        CFG.salt=b64(crypto.getRandomValues(new Uint8Array(16)));
+        S.key=await deriveKey(f.p1,CFG.salt,CFG.iter);S.data=DEFAULT();
+      }
+      if(f.token){S.token=f.token;CFG.tokenEnv=await encWith(S.key,f.token)}else{CFG.owner='';CFG.repo=''}
+      saveCfg();await saveLocal();
+      S.view='heute';render();
+      if(hasRemote()){S.dirty=!remote;await syncNow()}
+      toast(remote?'Daten von GitHub geladen ✓':'Eingerichtet ✓');
+    }catch(e){CFG=null;S.key=null;S.data=null;S.token=null;err.textContent=e.message||String(e)}
+  }
+  return h('div',{class:'lock',style:'justify-content:flex-start;padding-top:calc(40px + var(--safe-t))'},
+    h('div',{class:'moon',style:'width:64px;height:64px'}),
+    h('h1',null,'Bedürfnis-Diary'),
+    h('p',{class:'c'},'Einmalige Einrichtung auf diesem Gerät.'),
+    h('form',{class:'card',onsubmit:e=>{e.preventDefault();submit()}},
+      h('h2',null,'Passphrase'),
+      h('p',{class:'sub'},'Damit wird alles verschlüsselt. Sie wird nirgends gespeichert – wenn du sie vergisst, sind die Daten nicht wiederherstellbar.'),
+      h('input',{class:'hidden-user',type:'text',autocomplete:'username',value:'beduerfnis-diary',tabindex:'-1','aria-hidden':'true'}),
+      I('p1','Passphrase','password','new-password'),h('div',{style:'height:8px'}),I('p2','Passphrase wiederholen','password','new-password'),
+      h('h2',{class:'mt2'},'Sync über GitHub ',h('span',{class:'faint small',style:'font-family:var(--sans)'},'(optional)')),
+      h('p',{class:'sub'},'Privates Daten-Repo + Fine-grained Token mit Zugriff nur auf dieses Repo (Contents: Read and write). Liegen dort schon Daten, werden sie geladen.'),
+      h('label',{class:'lbl'},'GitHub-Account'),I('owner','Account'),
+      h('label',{class:'lbl'},'Daten-Repo (privat)'),I('repo','Repo'),
+      h('label',{class:'lbl'},'Token'),I('token','github_pat_…','password'),
+      h('button',{class:'btn full mt2',type:'submit'},'Los geht’s'),err));
+}
+
+/* ---------- gemeinsame Bausteine ---------- */
+function card(title,sub,...kids){return h('div',{class:'card'},title&&h('h2',null,title),sub&&h('p',{class:'sub'},sub),kids)}
+function chip(label,on,onclick,extra=''){return h('button',{class:`chip ${extra} ${on?'on':''}`,onclick},label)}
+function adder(ph,onAdd,btn='＋'){
+  let v='';const inp=h('input',{class:'field',placeholder:ph,enterkeyhint:'done',oninput:e=>v=e.target.value,
+    onkeydown:e=>{if(e.key==='Enter'){e.preventDefault();doit()}}});
+  function doit(){const t=v.trim();if(!t)return;v='';inp.value='';onAdd(t)}
+  return h('div',{class:'addrow'},inp,h('button',{class:'btn ghost',onclick:doit},btn));
+}
+function addToList(list,name){
+  const ex=S.data[list].find(x=>x.name.toLowerCase()===name.toLowerCase());
+  if(ex){if(ex.del){ex.del=false;ex.u=now()}return ex}
+  const it={id:uid(),name,u:now()};S.data[list].push(it);return it;
+}
+function needLabel(n){return (n.icon?n.icon+' ':'')+n.name}
+function rangeDays(n,end=today()){const a=[];for(let i=n-1;i>=0;i--)a.push(addDays(end,-i));return a}
+
+/* ---------- HEUTE ---------- */
+function dateNav(){
+  const isToday=S.date===today();const d=parse(S.date);
+  return h('div',{class:'datenav'},
+    h('button',{class:'arr',onclick:()=>{S.date=addDays(S.date,-1);rr()},'aria-label':'Vortag'},'‹'),
+    h('div',{class:'d'},h('b',null,isToday?greet():WDL[d.getDay()]),h('span',null,(isToday?WDL[d.getDay()]+', ':'')+fmtLong(S.date)),
+      !isToday&&h('div',null,h('button',{class:'link',onclick:()=>{S.date=today();rr()}},'→ zu heute'))),
+    h('button',{class:'arr',disabled:isToday,onclick:()=>{S.date=addDays(S.date,1);rr()},'aria-label':'Nächster Tag'},'›'));
+}
+function greet(){const hr=new Date().getHours();const n=S.data.profile.name;const g=hr<11?'Guten Morgen':hr<17?'Hallo':'Guten Abend';return n?`${g}, ${n}`:g}
+function affirmationCard(){
+  const a=live(S.data.affirmations);if(!a.length)return null;
+  if(S.affIdx==null||S.affIdx>=a.length)S.affIdx=Math.floor(Math.random()*a.length);
+  return h('div',{class:'card aff',onclick:()=>{S.affIdx=(S.affIdx+1)%a.length;rr()}},h('p',null,a[S.affIdx].text),h('small',null,a.length>1?'antippen für den nächsten Satz':''));
+}
+function welcomeCard(){
+  if(S.data.imported||Object.keys(S.data.days).length)return null;
+  return card('Willkommen 🌲','Importiere einmalig deine startdaten.json – dann sind deine Bedürfnisse, Körpersignale und Sätze schon da. Danach kannst du die Datei löschen.',
+    importButton('Startdaten importieren'),
+    h('button',{class:'link mt',onclick:()=>{S.data.imported=true;touch();rr()}},'Ohne Import starten'));
+}
+function vHeute(){
+  const D=getDay(S.date,false)||{met:{},short:[],signals:[],good:[],checks:[]};
+  const upd=fn=>{const x=getDay(S.date);fn(x);touch(x);rr()};
+  return [
+    dateNav(),
+    welcomeCard(),
+    affirmationCard(),
+    card('Wie viel Raum hatte Selbstfürsorge?',null,
+      h('div',{class:'scale'},[...Array(11)].map((_,i)=>h('button',{class:D.scale===i?'on':'',onclick:()=>upd(x=>x.scale=x.scale===i?null:i)},i))),
+      h('div',{class:'scale-l'},h('span',null,'sehr wenig'),h('span',null,'sehr viel'))),
+    card('Was hast du dir heute erfüllt?','Bedürfnis antippen, dann eintragen, was du dafür gemacht hast.',needsMet(D,upd)),
+    card('Was kam zu kurz?',null,h('div',{class:'chips'},live(S.data.needs).map(n=>chip(needLabel(n),(D.short||[]).includes(n.id),()=>upd(x=>{x.short=toggle(x.short,n.id)}),'rose')))),
+    card('Körpersignale',null,
+      h('div',{class:'chips'},live(S.data.signals).map(s=>chip(s.name,(D.signals||[]).includes(s.id),()=>upd(x=>{x.signals=toggle(x.signals,s.id)}),'lilac'))),
+      adder('anderes Signal …',t=>{const s=addToList('signals',t);upd(x=>{if(!x.signals.includes(s.id))x.signals.push(s.id)})})),
+    card('Hat sich gut angefühlt ✨','Kleine Momente, die Kraft gegeben haben.',
+      (D.good||[]).length?h('div',{class:'mb0'},D.good.map(g=>h('div',{class:'spread item'},h('span',null,'· '+g.text),h('button',{class:'faint',onclick:()=>upd(x=>x.good=x.good.filter(y=>y.id!==g.id)),'aria-label':'löschen'},'×')))):null,
+      adder('z. B. Kaffee in der Sonne',t=>upd(x=>x.good.push({id:uid(),text:t,t:now()})))),
+    card('Für dich eingestanden?','Gab es heute einen Moment, in dem es um deine Bedürfnisse ging?',
+      h('div',{class:'seg3'},[['ja','💪 Ja'],['nachgegeben','Nachgegeben'],['nicht','Kam nicht vor']].map(([k,l])=>
+        h('button',{class:D.stood===k?'on':'',onclick:()=>upd(x=>x.stood=x.stood===k?null:k)},l))),
+      D.stood==='nachgegeben'&&h('button',{class:'btn ghost full mt',onclick:()=>{S.logDraft=newLog(S.date);go('log')}},'📝 Situation im Log festhalten')),
+    card('Gedanken',null,h('textarea',{class:'field',placeholder:'Was beschäftigt dich?',value:D.note||'',oninput:e=>{const x=getDay(S.date);x.note=e.target.value;touch(x)}})),
+    exerciseCard(true),
+    checksList(D),
+    baqCard()
+  ];
+}
+function toggle(arr,id){arr=arr||[];return arr.includes(id)?arr.filter(x=>x!==id):[...arr,id]}
+function actsFor(nid){return (S.data.activities[nid]||[]).filter(a=>!a.del)}
+function addActivity(nid,text,date){
+  const list=S.data.activities[nid]=S.data.activities[nid]||[];
+  const id=text.toLowerCase();let a=list.find(x=>x.id===id);
+  if(!a){a={id,text,n:0,last:date,u:now()};list.push(a)}
+  a.del=false;a.n=(a.n||0)+1;a.last=date;a.u=now();return a;
+}
+function needsMet(D,upd){
+  const met=D.met||{};const needs=live(S.data.needs);
+  return [
+    h('div',{class:'chips'},needs.map(n=>chip(needLabel(n),n.id in met,()=>upd(x=>{
+      if(n.id in x.met){(x.met[n.id]||[]).forEach(t=>decAct(n.id,t));delete x.met[n.id]}else x.met[n.id]=[];
+    }),'moss'))),
+    needs.filter(n=>n.id in met).map(n=>{
+      const sel=met[n.id]||[];const acts=actsFor(n.id).sort((a,b)=>(b.n||0)-(a.n||0));const edit=S.editAct[n.id];
+      return h('div',{class:'npanel'},
+        h('div',{class:'t'},h('span',null,needLabel(n)),acts.length?h('button',{class:'link',onclick:()=>{S.editAct[n.id]=!edit;rr()}},edit?'fertig':'bearbeiten'):null),
+        acts.length?h('div',{class:'chips'},acts.map(a=>edit
+          ?h('button',{class:'chip sm',onclick:()=>{a.del=true;a.u=now();touch();rr()}},a.text,h('span',{class:'x'},'×'))
+          :chip(a.text,sel.includes(a.text),()=>upd(x=>{const s=x.met[n.id]||[];if(s.includes(a.text)){x.met[n.id]=s.filter(t=>t!==a.text);decAct(n.id,a.text)}else{x.met[n.id]=[...s,a.text];addActivity(n.id,a.text,S.date)}}),'moss sm'))):null,
+        adder('Was genau? z. B. '+(n.name.includes('Bewegung')?'Laufen':'…'),t=>upd(x=>{const a=addActivity(n.id,t,S.date);const s=x.met[n.id]||[];if(!s.includes(a.text))x.met[n.id]=[...s,a.text]})));
+    })
+  ];
+}
+function decAct(nid,text){const a=(S.data.activities[nid]||[]).find(x=>x.id===text.toLowerCase());if(a){a.n=Math.max(0,(a.n||0)-1);a.u=now()}}
+function checksList(D){
+  const c=(D.checks||[]);if(!c.length)return null;
+  return card('GFK-Notizen von diesem Tag',null,c.map(x=>h('div',{class:'item'},h('div',{class:'meta'},x.type==='mini'?'Mini-Check':'Selbstempathie'),h('div',null,x.text))));
+}
+function baqCard(){
+  const Q=[['Gibt es dir Energie – oder kostet es Energie?','gibt Energie','kostet Energie'],
+    ['Würdest du es auch tun, wenn niemand es erwartet?','ja','eher nicht'],
+    ['Stell dir vor, es fällt aus: Was fühlst du?','schade, Verlust','Erleichterung'],
+    ['Von wem kam der Wunsch ursprünglich?','von mir','von anderen']];
+  const a=S.baq;const done=Q.every((_,i)=>a[i]!=null);const score=Q.reduce((s,_,i)=>s+(a[i]===0?1:0),0);
+  const res=!done?null:score>=3?['🌿 Klingt nach einem echten Bedürfnis.','Gib ihm Raum – du darfst.']
+    :score===2?['🌗 Gemischt.','Vielleicht steckt ein Bedürfnis dahinter, aber die Form fühlt sich wie eine Aufgabe an. Welches Bedürfnis ist es – und gibt es einen leichteren Weg dorthin?']
+    :['📋 Eher eine Aufgabe.','Völlig okay – aber zähl es nicht als Selbstfürsorge. Was bräuchtest du stattdessen gerade wirklich?'];
+  return h('div',{class:'card'},h('details',{class:'acc',open:Object.keys(a).length?true:null},
+    h('summary',null,'🧭 Bedürfnis oder Aufgabe?'),
+    h('p',{class:'sub'},'Für Momente, in denen du es nicht unterscheiden kannst. Denk an eine konkrete Sache.'),
+    Q.map(([q,y,n],i)=>h('div',{class:'mt'},h('div',{class:'small',style:'margin-bottom:6px'},q),
+      h('div',{class:'seg3'},[y,n].map((l,j)=>h('button',{class:a[i]===j?'on':'',onclick:()=>{a[i]=j;rr()}},l))))),
+    res&&h('div',{class:'gfk-prev mt2',style:'font-style:normal'},h('b',null,res[0]),' ',res[1]),
+    Object.keys(a).length?h('button',{class:'link mt',onclick:()=>{S.baq={};rr()}},'neu prüfen'):null));
+}
+
+/* ---------- LOG ---------- */
+function newLog(date){return {id:null,date:date||today(),ctx:[],people:[],need:null,feel:[],what:'',thought:'',gfk:{obs:'',feel:'',need:'',req:''}}}
+function gfkSentence(g,fb={}){
+  const f=(g.feel||fb.feel||'').trim(),n=(g.need||fb.need||'').trim();
+  const o=(g.obs||'').replace(/^wenn\s+/i,'').trim();
+  const r=(g.req||'').replace(/^wärst du bereit,?\s*/i,'').replace(/\?\s*$/,'').trim();
+  if(!o&&!f&&!n&&!r)return '';
+  let s='';
+  if(o)s+=`Wenn ${o}, `;
+  if(f)s+=o?`fühle ich mich ${f}`:`Ich fühle mich ${f}`;
+  if(n)s+=f?`, weil mir ${n} wichtig ist.`:(o?`ist mir ${n} wichtig.`:`Mir ist ${n} wichtig.`);
+  else if(f)s+='.';
+  else if(o)s=s.replace(/, $/,'.');
+  if(r)s+=` Wärst du bereit, ${r}?`;
+  return s.trim();
+}
+const logFb=l=>({feel:(l.feel||[]).map(id=>nm('feelings',id)).join(' und '),need:(needById(l.need)||{}).name||''});
+function vLog(){
+  const D=S.logDraft;
+  const logs=live(S.data.logs).sort((a,b)=>(b.date+b.created).localeCompare(a.date+a.created));
+  const last30=logs.filter(l=>l.date>=addDays(today(),-29)).length;
+  return [
+    D?logForm(D):h('button',{class:'btn full',style:'margin-bottom:12px;padding:14px',onclick:()=>{S.logDraft=newLog();rr()}},'＋ Situation festhalten'),
+    !D&&h('div',{class:'card'},h('div',{class:'spread'},h('div',null,h('div',{class:'big'},last30),h('div',{class:'small muted'},'Situationen in 30 Tagen')),
+      h('button',{class:'btn ghost sm',onclick:()=>{S.gfkTab='ueben';S.se={};go('gfk')}},'🫶 Selbstempathie'))),
+    !D&&(logs.length?card('Bisherige Situationen',null,logs.map(l=>{
+      const n=needById(l.need);
+      return h('div',{class:'item',style:'cursor:pointer',onclick:()=>{S.logDraft=clone(l);rr();scrollTo(0,0)}},
+        h('div',{class:'meta'},fmtShort(l.date),' · ',[...l.ctx.map(id=>nm('contexts',id)),...l.people.map(id=>nm('people',id))].join(', ')),
+        h('div',null,n?needLabel(n)+' kam zu kurz':'',l.what?(n?' – ':'')+l.what:''),
+        l.thought&&h('div',{class:'small muted'},'Gedanke: „'+l.thought+'“'),
+        gfkSentence(l.gfk||{},logFb(l))&&h('div',{class:'gfk-prev'},gfkSentence(l.gfk||{},logFb(l))));
+    })):h('p',{class:'center muted small mt2'},'Noch keine Einträge. Nachgeben ist kein Fehler – es zu bemerken ist der erste Schritt.'))
+  ];
+}
+function logForm(D){
+  const set=(k,v)=>{D[k]=v};
+  const T=(k,ph,rows)=>h(rows?'textarea':'input',{class:'field',placeholder:ph,value:D[k]||'',rows:rows||null,oninput:e=>set(k,e.target.value)});
+  const G=(k,ph)=>h('input',{class:'field',placeholder:ph,value:D.gfk[k]||'',oninput:e=>{D.gfk[k]=e.target.value;prev.textContent=gfkSentence(D.gfk,fb())||'…'}});
+  const fb=()=>({feel:D.feel.map(id=>nm('feelings',id)).join(' und '),need:D.need?needById(D.need)?.name:''});
+  const prev=h('div',{class:'gfk-prev'},gfkSentence(D.gfk,fb())||'Dein Satz erscheint hier …');
+  const chipsOf=(list,key,cls,single)=>h('div',{class:'chips'},live(S.data[list]).map(x=>chip(list==='needs'?needLabel(x):x.name,single?D[key]===x.id:D[key].includes(x.id),()=>{
+    D[key]=single?(D[key]===x.id?null:x.id):toggle(D[key],x.id);rr()},cls)));
+  async function save(){
+    const e=D.id?S.data.logs.find(x=>x.id===D.id):null;
+    const rec={...clone(D),u:now()};
+    if(e)Object.assign(e,rec);else{rec.id=uid();rec.created=new Date().toISOString();S.data.logs.push(rec)}
+    S.logDraft=null;touch();rr();toast('Gespeichert ✓');
+  }
+  return h('div',{class:'card'},
+    h('div',{class:'spread'},h('h2',null,D.id?'Situation bearbeiten':'Neue Situation'),
+      h('input',{type:'date',class:'field',style:'width:auto;padding:6px 8px',value:D.date,max:today(),onchange:e=>set('date',e.target.value||today())})),
+    h('label',{class:'lbl'},'Bereich'),chipsOf('contexts','ctx',''),
+    adder('anderer Bereich …',t=>{const c=addToList('contexts',t);D.ctx=[...new Set([...D.ctx,c.id])];touch();rr()}),
+    h('label',{class:'lbl'},'Wer war beteiligt?'),chipsOf('people','people',''),
+    adder('andere …',t=>{const c=addToList('people',t);D.people=[...new Set([...D.people,c.id])];touch();rr()}),
+    h('label',{class:'lbl'},'Welches Bedürfnis kam zu kurz?'),chipsOf('needs','need','rose',true),
+    h('label',{class:'lbl'},'Was hast du gefühlt?'),chipsOf('feelings','feel','lilac'),
+    adder('anderes Gefühl …',t=>{const c=addToList('feelings',t);D.feel=[...new Set([...D.feel,c.id])];touch();rr()}),
+    h('label',{class:'lbl'},'Was ist passiert?'),T('what','kurz, ohne zu bewerten',2),
+    h('label',{class:'lbl'},'Was hast du dir dabei gesagt?'),T('thought','z. B. „Ist doch nicht so wichtig“'),
+    h('h3',null,'🕊️ Nächstes Mal – als GFK-Satz'),
+    h('p',{class:'sub'},'Leer gelassene Felder werden aus Gefühl & Bedürfnis oben ergänzt.'),
+    h('label',{class:'lbl'},'Beobachtung: Wenn …'),G('obs','ich höre, dass der Abend schon verplant ist'),
+    h('label',{class:'lbl'},'Gefühl: … fühle ich mich …'),G('feel',fb().feel||'enttäuscht'),
+    h('label',{class:'lbl'},'Bedürfnis: … weil mir … wichtig ist'),G('need',fb().need||'Selbstbestimmung'),
+    h('label',{class:'lbl'},'Bitte: Wärst du bereit, …?'),G('req','dass wir den Abend zusammen planen'),
+    prev,
+    h('div',{class:'row mt2'},
+      h('button',{class:'btn grow',onclick:save},'Speichern'),
+      h('button',{class:'btn ghost',onclick:()=>{S.logDraft=null;rr()}},'Abbrechen')),
+    D.id&&h('button',{class:'link mt',style:'color:var(--rose)',onclick:()=>{if(!confirm('Eintrag löschen?'))return;const e=S.data.logs.find(x=>x.id===D.id);if(e){e.del=true;e.u=now()}S.logDraft=null;touch();rr()}},'Eintrag löschen'));
+}
+
+/* ---------- WOCHE ---------- */
+function weekDates(k){
+  const [y,w]=k.split('-W').map(Number);const jan4=new Date(y,0,4);const mon=weekStart(ymd(jan4));
+  const start=addDays(mon,(w-1)*7);return [...Array(7)].map((_,i)=>addDays(start,i));
+}
+function shiftWeek(k,n){return isoWeek(addDays(weekDates(k)[0],n*7))}
+function vWoche(){
+  const k=S.week,W=getWeek(k,false)||{focus:null,focusNote:'',blocks:[]};const dates=weekDates(k);
+  const updW=fn=>{const w=getWeek(k);fn(w);touch();rr()};
+  const cur=k===isoWeek(today());
+  const fn=needById(W.focus);
+  const blocks=live(W.blocks).sort((a,b)=>a.day-b.day||(a.time||'').localeCompare(b.time||''));
+  const prevW=S.data.weeks[shiftWeek(k,-1)];
+  const days=dates.map(d=>S.data.days[d]).filter(Boolean);
+  const sc=days.filter(d=>d.scale!=null).map(d=>d.scale);
+  const B=S.blockDraft;
+  return [
+    h('div',{class:'datenav'},
+      h('button',{class:'arr',onclick:()=>{S.week=shiftWeek(k,-1);rr()}},'‹'),
+      h('div',{class:'d'},h('b',null,'KW '+Number(k.split('-W')[1])),h('span',null,fmtLong(dates[0])+' – '+fmtLong(dates[6])),
+        !cur&&h('div',null,h('button',{class:'link',onclick:()=>{S.week=isoWeek(today());rr()}},'→ diese Woche'))),
+      h('button',{class:'arr',onclick:()=>{S.week=shiftWeek(k,1);rr()}},'›')),
+    card('Wochenfokus','Welches Bedürfnis willst du diese Woche bewusster berücksichtigen?',
+      h('div',{class:'chips'},live(S.data.needs).map(n=>chip(needLabel(n),W.focus===n.id,()=>updW(w=>w.focus=w.focus===n.id?null:n.id)))),
+      fn&&h('textarea',{class:'field mt',rows:2,placeholder:'Wie willst du ihm Raum geben?',value:W.focusNote||'',oninput:e=>{getWeek(k).focusNote=e.target.value;touch()}}),
+      fn&&h('div',{class:'mt'},h('div',{class:'small muted'},needLabel(fn)+' diese Woche:'),
+        h('div',{class:'days7'},dates.map(d=>{const x=S.data.days[d];const on=x&&x.met&&fn.id in x.met;const sh=x&&(x.short||[]).includes(fn.id);
+          return h('div',null,h('i',{class:on?'on':sh?'sh':''}),WD[parse(d).getDay()])})),
+        h('div',{class:'legend'},h('span',null,h('i',{style:'background:var(--moss)'}),'erfüllt'),h('span',null,h('i',{style:'background:var(--rose)'}),'zu kurz')))),
+    card('Zeitblöcke für dich','Vorher Raum schaffen – und dich dann daran halten.',
+      blocks.length?h('div',null,blocks.map(b=>{
+        const n=needById(b.need);
+        return h('div',{class:'block'},
+          h('div',{class:'when'},WDL[(b.day+1)%7].slice(0,2)+(b.time?' · '+b.time:''),h('br'),h('span',{class:'faint'},b.dur||'')),
+          h('div',{class:'grow'},h('div',null,b.what),n&&h('div',{class:'small faint'},needLabel(n))),
+          h('button',{class:'st '+(b.status==='ja'?'ja':''),title:'gehalten',onclick:()=>updW(w=>{const x=w.blocks.find(y=>y.id===b.id);x.status=x.status==='ja'?'offen':'ja';x.u=now()})},'✓'),
+          h('button',{class:'st '+(b.status==='nein'?'nein':''),title:'nicht gehalten',onclick:()=>updW(w=>{const x=w.blocks.find(y=>y.id===b.id);x.status=x.status==='nein'?'offen':'nein';x.u=now()})},'✗'),
+          h('button',{class:'faint',style:'padding:4px',onclick:()=>updW(w=>{const x=w.blocks.find(y=>y.id===b.id);x.del=true;x.u=now()}),'aria-label':'löschen'},'×'));
+      })):h('p',{class:'small muted'},'Noch keine Blöcke geplant.'),
+      !blocks.length&&prevW&&live(prevW.blocks).length?h('button',{class:'btn ghost full mt',onclick:()=>updW(w=>{live(prevW.blocks).forEach(b=>w.blocks.push({...clone(b),id:uid(),status:'offen',u:now()}))})},'Blöcke der Vorwoche übernehmen'):null,
+      B?blockForm(B,k):h('button',{class:'btn ghost full mt',onclick:()=>{S.blockDraft={day:1,time:'',dur:'2 h',what:'',need:W.focus};rr()}},'＋ Block planen')),
+    card('Wochenbilanz',null,h('div',{class:'kpis'},
+      kpi(days.filter(d=>d.scale!=null||Object.keys(d.met||{}).length).length+'/7','Abende eingetragen'),
+      kpi(sc.length?avg(sc).toFixed(1).replace('.',','):'–','Ø Selbstfürsorge'),
+      kpi(blocks.length?blocks.filter(b=>b.status==='ja').length+'/'+blocks.length:'–','Blöcke gehalten')),
+      h('div',{class:'kpis mt'},
+      kpi(days.filter(d=>d.stood==='ja').length,'mal eingestanden'),
+      kpi(days.filter(d=>d.stood==='nachgegeben').length,'mal nachgegeben'),
+      kpi(days.filter(d=>d.ex&&d.ex.done).length,'GFK-Übungen')))
+  ];
+}
+function blockForm(B,k){
+  const allActs=[];Object.entries(S.data.activities).forEach(([nid,l])=>l.filter(a=>!a.del).forEach(a=>allActs.push({...a,nid})));
+  allActs.sort((a,b)=>(b.n||0)-(a.n||0));
+  const what=h('input',{class:'field',placeholder:'Was? z. B. kreativ sein',value:B.what,oninput:e=>B.what=e.target.value});
+  return h('div',{class:'mt2'},
+    h('label',{class:'lbl'},'Tag'),h('div',{class:'chips'},['Mo','Di','Mi','Do','Fr','Sa','So'].map((l,i)=>chip(l,B.day===i,()=>{B.day=i;rr()},'sm'))),
+    h('label',{class:'lbl'},'Uhrzeit & Dauer'),
+    h('div',{class:'row'},h('input',{type:'time',class:'field',style:'width:auto',value:B.time,onchange:e=>B.time=e.target.value}),
+      h('div',{class:'chips'},['30 min','1 h','2 h','3 h','Abend'].map(d=>chip(d,B.dur===d,()=>{B.dur=d;rr()},'sm')))),
+    h('label',{class:'lbl'},'Was?'),what,
+    allActs.length?h('div',{class:'chips mt'},allActs.slice(0,8).map(a=>chip(a.text,false,()=>{B.what=a.text;B.need=a.nid;rr()},'sm'))):null,
+    h('label',{class:'lbl'},'Für welches Bedürfnis?'),h('div',{class:'chips'},live(S.data.needs).map(n=>chip(needLabel(n),B.need===n.id,()=>{B.need=B.need===n.id?null:n.id;rr()},'sm moss'))),
+    h('div',{class:'row mt2'},
+      h('button',{class:'btn grow',onclick:()=>{if(!B.what.trim()){what.focus();return}const w=getWeek(k);w.blocks.push({id:uid(),...B,what:B.what.trim(),status:'offen',u:now()});S.blockDraft=null;touch();rr()}},'Block speichern'),
+      h('button',{class:'btn ghost',onclick:()=>{S.blockDraft=null;rr()}},'Abbrechen')));
+}
+const avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
+const kpi=(v,l)=>h('div',{class:'kpi'},h('div',{class:'v'},v),h('div',{class:'l'},l));
+
+/* ---------- ICH ---------- */
+function vIch(){
+  const tabs=[['rueckblick','Rückblick'],['gut','Gut-Buch'],['saetze','Sätze'],['gespraech','Gespräch']];
+  return [h('div',{class:'seg'},tabs.map(([k,l])=>h('button',{class:S.ichTab===k?'on':'',onclick:()=>{S.ichTab=k;rr()}},l))),
+    {rueckblick:vRueck,gut:vGut,saetze:vSaetze,gespraech:vGespraech}[S.ichTab]()];
+}
+function vRueck(){
+  const R=S.range;const dates=rangeDays(R);const days=dates.map(d=>[d,S.data.days[d]]).filter(([,x])=>x);
+  const needs=live(S.data.needs);
+  const scored=days.filter(([,x])=>x.scale!=null);
+  // Chart
+  const W=600,H=140,P=6;const bw=(W-P*2)/R;
+  const svg=`<svg viewBox="0 0 ${W} ${H+18}" width="100%" style="display:block">
+    ${[0,5,10].map(v=>`<line x1="0" x2="${W}" y1="${H-v/10*(H-10)}" y2="${H-v/10*(H-10)}" stroke="rgba(241,232,214,.08)"/>`).join('')}
+    ${dates.map((d,i)=>{const x=S.data.days[d];if(!x||x.scale==null)return '';const hh=Math.max(3,x.scale/10*(H-10));
+      return `<rect x="${P+i*bw+bw*.15}" y="${H-hh}" width="${Math.max(2,bw*.7)}" height="${hh}" rx="${Math.min(4,bw*.3)}" fill="url(#g)"><title>${fmtShort(d)}: ${x.scale}</title></rect>`}).join('')}
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4d29c"/><stop offset="1" stop-color="#93b48b"/></linearGradient></defs>
+    <text x="0" y="${H+14}" font-size="11" fill="#7d7868">${fmtShort(dates[0])}</text><text x="${W}" y="${H+14}" font-size="11" fill="#7d7868" text-anchor="end">heute</text>
+  </svg>`;
+  const metC={},shortC={},scaleBy={};
+  needs.forEach(n=>{metC[n.id]=0;shortC[n.id]=0;scaleBy[n.id]=[]});
+  days.forEach(([,x])=>{Object.keys(x.met||{}).forEach(id=>{if(id in metC){metC[id]++;if(x.scale!=null)scaleBy[id].push(x.scale)}});(x.short||[]).forEach(id=>{if(id in shortC)shortC[id]++})});
+  const mx=Math.max(1,...Object.values(metC),...Object.values(shortC));
+  const acts={};days.forEach(([,x])=>Object.entries(x.met||{}).forEach(([nid,l])=>l.forEach(t=>{const k=nid+'|'+t;acts[k]=(acts[k]||0)+1})));
+  const topActs=Object.entries(acts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const sig={};days.forEach(([,x])=>(x.signals||[]).forEach(id=>sig[id]=(sig[id]||0)+1));
+  const topSig=Object.entries(sig).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const sigShort=id=>{const c={};days.forEach(([,x])=>{if((x.signals||[]).includes(id))(x.short||[]).forEach(n=>c[n]=(c[n]||0)+1)});const t=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];return t&&needById(t[0])};
+  const overall=scored.length?avg(scored.map(([,x])=>x.scale)):null;
+  const lift=needs.filter(n=>scaleBy[n.id].length>=2).map(n=>[n,avg(scaleBy[n.id])]).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const stood=days.filter(([,x])=>x.stood==='ja').length,gave=days.filter(([,x])=>x.stood==='nachgegeben').length;
+  const logsN=live(S.data.logs).filter(l=>l.date>=dates[0]).length;
+  return [
+    h('div',{class:'seg'},[7,30,90].map(n=>h('button',{class:R===n?'on':'',onclick:()=>{S.range=n;rr()}},n+' Tage'))),
+    card('Raum für Selbstfürsorge',null,
+      h('div',{class:'row',style:'align-items:baseline;gap:10px'},h('span',{class:'big'},overall!=null?overall.toFixed(1).replace('.',','):'–'),h('span',{class:'small muted'},`Ø an ${scored.length} Abenden`)),
+      h('div',{html:svg,class:'mt'})),
+    card('Bedürfnisse','Wie oft erfüllt – und wie oft zu kurz gekommen.',
+      h('div',{class:'bars'},needs.map(n=>h('div',{class:'b'},h('span',null,needLabel(n)),
+        h('div',{class:'track'},
+          h('div',{class:'row',style:'gap:6px'},h('div',{class:'bar m',style:`width:${metC[n.id]/mx*85}%`}),h('span',{class:'small faint'},metC[n.id])),
+          h('div',{class:'row',style:'gap:6px'},h('div',{class:'bar r',style:`width:${shortC[n.id]/mx*85}%`}),h('span',{class:'small faint'},shortC[n.id])))))),
+      h('div',{class:'legend'},h('span',null,h('i',{style:'background:var(--moss)'}),'erfüllt'),h('span',null,h('i',{style:'background:var(--rose)'}),'zu kurz'))),
+    lift.length&&overall!=null?card('Was dir guttut','Ø Selbstfürsorge an Tagen, an denen du dir dieses Bedürfnis erfüllt hast (gesamt Ø '+overall.toFixed(1).replace('.',',')+'):',
+      lift.map(([n,v])=>h('div',{class:'spread item'},h('span',null,needLabel(n)),h('b',{style:'color:var(--amber2)'},v.toFixed(1).replace('.',','))))):null,
+    topActs.length?card('Häufigste Aktivitäten',null,h('div',{class:'chips'},topActs.map(([k,c])=>{const[nid,t]=k.split('|');const n=needById(nid);return h('span',{class:'chip sm'},(n?n.icon+' ':'')+t,h('span',{class:'n'},c+'×'))}))):null,
+    topSig.length?card('Körpersignale','Und welches Bedürfnis an diesen Tagen am häufigsten zu kurz kam.',
+      topSig.map(([id,c])=>{const n=sigShort(id);return h('div',{class:'spread item'},h('span',null,nm('signals',id),h('span',{class:'faint small'},'  '+c+'×')),h('span',{class:'small muted'},n?'→ '+needLabel(n):''))})):null,
+    card('Für dich eingestanden',null,h('div',{class:'kpis'},kpi(stood,'mal eingestanden'),kpi(gave,'mal nachgegeben'),kpi(logsN,'Log-Einträge'))),
+  ];
+}
+function vGut(){
+  const all=[];Object.entries(S.data.days).forEach(([d,x])=>(x.good||[]).forEach(g=>all.push({...g,d})));
+  all.sort((a,b)=>b.d.localeCompare(a.d)||b.t-a.t);
+  if(S.gutPick==null||S.gutPick>=all.length)S.gutPick=Math.floor(Math.random()*Math.max(1,all.length));
+  const r=all[S.gutPick];
+  const grouped={};all.forEach(g=>(grouped[g.d]=grouped[g.d]||[]).push(g));
+  return [
+    r&&h('div',{class:'card aff',onclick:()=>{S.gutPick=Math.floor(Math.random()*all.length);rr()}},h('p',null,r.text),h('small',null,'Erinnerung vom '+fmtShort(r.d)+' · antippen für eine andere')),
+    card('Für heute eintragen',null,adder('Was hat sich gut angefühlt?',t=>{const x=getDay(today());x.good.push({id:uid(),text:t,t:now()});touch(x);rr()})),
+    all.length?card('Alle Momente ('+all.length+')',null,Object.entries(grouped).map(([d,l])=>h('div',{class:'item'},h('div',{class:'meta'},fmtShort(d)),l.map(g=>h('div',null,'· '+g.text))))):
+      h('p',{class:'center muted small'},'Hier sammeln sich die kleinen Dinge, die dir Kraft geben.')
+  ];
+}
+function vSaetze(){
+  const a=live(S.data.affirmations);
+  const SUG=['Meine Bedürfnisse sind genauso wichtig wie die der anderen.','Ein Nein zu einem Plan ist kein Nein zu der Person.','Ich darf zuerst sagen, was ich möchte.','Nachgeben darf eine Wahl sein – keine Gewohnheit.','Ein kleiner Konflikt ist besser als ein großer Groll.','Ich bin nicht dafür verantwortlich, dass alle immer zufrieden sind.','Wer mich mag, mag auch meine Wünsche.'];
+  const sug=SUG.filter(s=>!a.some(x=>x.text===s));
+  return [
+    card('Deine Erlaubnis-Sätze','Erscheinen oben im Heute-Reiter.',
+      a.length?a.map(x=>h('div',{class:'spread item'},h('span',{style:'font-family:var(--serif)'},x.text),h('button',{class:'faint',onclick:()=>{x.del=true;x.u=now();touch();rr()},'aria-label':'löschen'},'×'))):h('p',{class:'small muted'},'Noch keine Sätze.'),
+      adder('Neuer Satz …',t=>{S.data.affirmations.push({id:uid(),text:t,u:now()});touch();rr()})),
+    sug.length?card('Ideen','Antippen zum Übernehmen.',h('div',{class:'chips'},sug.map(s=>h('button',{class:'chip sm',onclick:()=>{S.data.affirmations.push({id:uid(),text:s,u:now()});touch();rr()}},'＋ '+s)))):null
+  ];
+}
+function vGespraech(){
+  const p=S.data.profile.partner;const t=live(S.data.talk);const open=t.filter(x=>!x.done),done=t.filter(x=>x.done);
+  const item=x=>h('div',{class:'check'},
+    h('button',{class:'box '+(x.done?'on':''),onclick:()=>{x.done=!x.done;x.u=now();touch();rr()},'aria-label':'besprochen'},x.done?'✓':''),
+    h('div',{class:'grow',style:x.done?'color:var(--faint);text-decoration:line-through':''},x.text),
+    h('button',{class:'faint',onclick:()=>{x.del=true;x.u=now();touch();rr()},'aria-label':'löschen'},'×'));
+  return [
+    card(p?`Fürs Gespräch mit ${p}`:'Gesprächsnotizen','Punkte sammeln, die du ansprechen willst. Abhaken, wenn besprochen.',
+      open.length?open.map(item):h('p',{class:'small muted'},'Gerade nichts offen.'),
+      adder('Was möchtest du ansprechen?',x=>{S.data.talk.push({id:uid(),text:x,done:false,u:now()});touch();rr()}),
+      h('button',{class:'link mt',onclick:()=>{S.gfkTab='ueben';go('gfk')}},'🕊️ Gespräch mit GFK vorbereiten →')),
+    done.length?card('Besprochen',null,done.map(item)):null
+  ];
+}
+
+/* ---------- GFK ---------- */
+const GF={
+  erfuellt:{'Frieden':['ruhig','entspannt','gelassen','erleichtert','ausgeglichen'],'Freude':['froh','glücklich','begeistert','verspielt','heiter'],
+    'Lebendigkeit':['lebendig','energiegeladen','neugierig','inspiriert','motiviert'],'Verbundenheit':['verbunden','berührt','zärtlich','liebevoll','dankbar'],
+    'Zuversicht':['zuversichtlich','sicher','stolz','zufrieden','selbstbewusst']},
+  unerfuellt:{'Angst':['ängstlich','besorgt','nervös','unsicher','verunsichert'],'Anspannung':['angespannt','gestresst','überfordert','getrieben','unruhig'],
+    'Ärger':['gereizt','frustriert','wütend','genervt','ungeduldig'],'Traurigkeit':['traurig','enttäuscht','einsam','niedergeschlagen','resigniert'],
+    'Erschöpfung':['müde','erschöpft','kraftlos','leer'],'Scham & Zweifel':['beschämt','verlegen','schuldbewusst','zerrissen','verwirrt']},
+  beduerfnisse:{'Autonomie':['Selbstbestimmung','Wahlfreiheit','Raum','Spontaneität','eigene Ziele'],
+    'Verbindung':['Nähe','Zugehörigkeit','Gesehen werden','Akzeptanz','Wertschätzung','Vertrauen','Unterstützung','Gegenseitigkeit','Verständnis','Intimität'],
+    'Körper':['Ruhe','Erholung','Bewegung','Sexualität','Berührung','Schlaf','Sicherheit'],
+    'Spiel & Lebendigkeit':['Freude','Humor','Leichtigkeit','Abenteuer','Kreativität','Genuss'],
+    'Integrität':['Ehrlichkeit','Authentizität','Selbstwert','Sinn','Wachstum'],
+    'Frieden':['Harmonie','Klarheit','Gleichgewicht','Ordnung','Natur & Schönheit']},
+  pseudo:[['übergangen','enttäuscht, traurig, frustriert','Beteiligung, Gesehen werden'],['ignoriert','einsam, traurig','Aufmerksamkeit, Zugehörigkeit'],
+    ['bevormundet','gereizt, frustriert','Selbstbestimmung, Autonomie'],['unter Druck gesetzt','angespannt, ängstlich','Wahlfreiheit, Raum'],
+    ['nicht ernst genommen','frustriert, traurig','Respekt, Gesehen werden'],['zurückgewiesen','traurig, verunsichert','Zugehörigkeit, Akzeptanz'],
+    ['ausgenutzt','wütend, erschöpft','Gegenseitigkeit, Fairness'],['im Stich gelassen','ängstlich, traurig, einsam','Unterstützung, Verlässlichkeit'],
+    ['missverstanden','frustriert, einsam','Verständnis, Klarheit'],['egoistisch („ich bin …“)','besorgt, zerrissen','Verbindung und Selbstfürsorge zugleich'],
+    ['falsch („mit mir stimmt was nicht“)','beschämt, verunsichert','Akzeptanz, Selbstwert']]
+};
+const EX=[
+  ['Kamera-Blick','Beschreibe eine Situation, die dich heute gestört hat, so, wie eine Kamera sie aufgenommen hätte – ohne Bewertung.'],
+  ['Gefühle benennen','Halte heute dreimal kurz inne und benenne dein Gefühl mit einem Wort aus der Liste.'],
+  ['Pseudogefühl übersetzen','Wenn du denkst „ich fühle mich übergangen / unter Druck gesetzt“ – übersetze es in ein echtes Gefühl und ein Bedürfnis.'],
+  ['Erst ich','Nenne bei der nächsten kleinen Entscheidung (Essen, Film, Abendplan) zuerst deinen Wunsch, bevor du fragst, was die anderen möchten.'],
+  ['„Ist mir egal“-Check','Achte darauf, wann du „egal“ oder „wie du willst“ sagst. Stimmt das in dem Moment wirklich?'],
+  ['Konkrete Bitte','Formuliere heute eine Bitte, die mit „Wärst du bereit, …?“ beginnt – konkret und jetzt machbar.'],
+  ['Nein mit Ja','Sag einmal Nein zu einer Strategie und nenne das Ja dahinter: „Nein, weil mir heute … wichtig ist.“'],
+  ['Inneren Kritiker übersetzen','Schreib einen harten Satz über dich auf und übersetze ihn in Gefühl + Bedürfnis.'],
+  ['Still mitraten','Hör in einem Gespräch zu und rate innerlich: Was fühlt die Person, was braucht sie?'],
+  ['Empathie-Vermutung','Frag einmal laut nach: „Bist du …, weil dir … wichtig ist?“'],
+  ['Verantwortung zurücknehmen','Ersetze „Du machst mich …“ durch „Ich bin …, weil ich … brauche.“'],
+  ['Danke mit GFK','Bedanke dich bei jemandem mit Beobachtung, Gefühl und erfülltem Bedürfnis: „Als du …, war ich …, weil mir … wichtig ist.“'],
+  ['Pause-Satz','Probier: „Gib mir kurz einen Moment – ich will merken, was ich eigentlich möchte.“'],
+  ['Körper-Check','Spür in Kiefer, Schultern und Bauch. Welches Gefühl ist da – welches Bedürfnis meldet sich?'],
+  ['Nachträglich ansprechen','Gibt es etwas von gestern, das du noch ansprechen willst? „Ich möchte noch mal auf … zurückkommen.“'],
+  ['Eigener Programmpunkt','Bevor ein Plan (Tag, Wochenende) feststeht, bring einen eigenen Punkt ein.'],
+  ['Immer & nie streichen','Erwisch dich bei „immer“ oder „nie“ und ersetze es durch eine konkrete Beobachtung.'],
+  ['Selbstempathie','Wenn du heute nachgegeben hast: zwei Minuten Selbstempathie (unten im Reiter Üben).'],
+  ['Verbindungsbitte','Frag nach etwas, das dir wichtig war: „Wie geht es dir mit dem, was ich gerade gesagt habe?“'],
+  ['Feiern','Erinnere dich an einen Moment, in dem du für dich eingestanden bist – welches Bedürfnis wurde dadurch erfüllt?']
+];
+function exIndex(d){const dt=parse(d);const doy=Math.floor((dt-new Date(dt.getFullYear(),0,0))/864e5);return (doy+S.exShift)%EX.length}
+function streak(){let n=0,d=today();const x=S.data.days[d];if(!(x&&(x.ex?.done||(x.checks||[]).length)))d=addDays(d,-1);
+  while(true){const y=S.data.days[d];if(y&&(y.ex?.done||(y.checks||[]).length)){n++;d=addDays(d,-1)}else break}return n}
+function exerciseCard(compact){
+  const dd=compact?S.date:today();const D=S.data.days[dd];const done=D&&D.ex&&D.ex.done;
+  const i=done?D.ex.i:exIndex(dd);const [t,txt]=EX[i%EX.length];const st=streak();
+  return h('div',{class:'card',style:'border-color:rgba(147,180,139,.3)'},
+    h('div',{class:'spread'},h('h2',null,'🕊️ GFK-Übung des Tages'),st?h('span',{class:'streak'},'🔥 '+st+(st===1?' Tag':' Tage')):null),
+    h('p',{style:'margin:6px 0 2px'},h('b',{style:'color:var(--amber2);font-weight:600'},t),' – ',txt),
+    h('div',{class:'row mt'},
+      h('button',{class:'btn sm '+(done?'':'ghost'),onclick:()=>{const x=getDay(dd);x.ex=done?null:{i,done:true};touch(x);rr()}},done?'✓ Erledigt':'Erledigt'),
+      !done&&h('button',{class:'link',onclick:()=>{S.exShift++;rr()}},'andere Übung'),
+      compact&&h('button',{class:'link',style:'margin-left:auto',onclick:()=>{S.gfkTab='ueberblick';go('gfk')}},'GFK-Spickzettel →')));
+}
+function vGfk(){
+  const tabs=[['ueberblick','Überblick'],['schritte','4 Schritte'],['listen','Listen'],['ueben','Üben']];
+  return [h('div',{class:'seg'},tabs.map(([k,l])=>h('button',{class:S.gfkTab===k?'on':'',onclick:()=>{S.gfkTab=k;rr()}},l))),
+    {ueberblick:gfkOverview,schritte:gfkSteps,listen:gfkLists,ueben:gfkPractice}[S.gfkTab]()];
+}
+function gfkOverview(){
+  return [
+    card('GFK in 30 Sekunden',null,h('div',{class:'prose',html:`
+      <p>Die <b>Gewaltfreie Kommunikation</b> nach Marshall B. Rosenberg geht davon aus: Hinter allem, was Menschen tun und sagen, stehen <b>Bedürfnisse</b>. Konflikte entstehen meist nicht durch die Bedürfnisse selbst, sondern durch die Strategien, mit denen wir sie erfüllen wollen.</p>
+      <div class="formula"><em>Wenn ich …</em> sehe / höre (Beobachtung),<br><em>fühle ich mich …</em> (Gefühl),<br><em>weil mir … wichtig ist.</em> (Bedürfnis)<br><em>Wärst du bereit, …?</em> (Bitte)</div>`})),
+    card('Die vier Schritte',null,
+      [['Beobachtung','Was ist konkret passiert? So, wie eine Kamera es aufzeichnen würde – ohne Bewertung.'],
+       ['Gefühl','Was fühle ich dabei? Ein echtes Gefühl, kein versteckter Vorwurf.'],
+       ['Bedürfnis','Was ist mir wichtig – was brauche ich? Unabhängig von einer bestimmten Person.'],
+       ['Bitte','Was genau wünsche ich mir jetzt? Konkret, machbar, und ein Nein ist erlaubt.']].map(([t,d],i)=>
+        h('div',{class:'step'},h('div',{class:'num'},i+1),h('div',null,h('b',null,t),h('div',{class:'small muted'},d))))),
+    card('Zwei Richtungen + eine nach innen',null,h('div',{class:'prose',html:`
+      <ul><li><b>Ehrlich ausdrücken:</b> sagen, was in mir lebendig ist und was ich mir wünsche.</li>
+      <li><b>Empathisch zuhören:</b> hören, was im anderen lebendig ist – hinter den Worten nach Gefühl und Bedürfnis suchen.</li>
+      <li><b>Selbstempathie:</b> mir selbst zuhören, bevor ich reagiere – gerade dann, wenn ich gleich nachgeben will.</li></ul>`})),
+    card('Wenn es im Alltag schwerfällt',null,h('div',{class:'prose',html:`
+      <ul><li><b>Es geht um Haltung, nicht um die Formel.</b> Niemand redet ständig in vier Schritten. Schon „Mir ist gerade Ruhe wichtig“ ist GFK.</li>
+      <li><b>Klein anfangen:</b> erst die Gefühle bemerken, dann die Bedürfnisse. Die Bitte kommt mit der Zeit.</li>
+      <li><b>Zeit gewinnen ist erlaubt:</b> „Ich brauche kurz einen Moment, um zu merken, was ich will.“</li>
+      <li><b>Nachträglich zählt auch:</b> „Ich möchte noch mal auf gestern zurückkommen.“ Es ist nie zu spät.</li>
+      <li><b>Rückfälle sind normal.</b> Alte Muster sind über Jahre gewachsen. Jedes Mal, wenn du es bemerkst, ist Übung.</li>
+      <li><b>Täglich ein Mini-Schritt:</b> Die Übung des Tages im Heute-Reiter dauert meist unter einer Minute.</li></ul>`})),
+    exerciseCard(false)
+  ];
+}
+function gfkSteps(){
+  const acc=(t,html,open)=>h('details',{class:'acc',open:open||null},h('summary',null,t),h('div',{class:'prose',html}));
+  return [h('div',{class:'card'},
+    acc('1 · Beobachtung statt Bewertung',`
+      <p>Eine Beobachtung beschreibt, was passiert ist – Ort, Zeit, Handlung, Worte. Eine Bewertung mischt sofort ein Urteil hinein. Auf Bewertungen reagiert das Gegenüber meist mit Verteidigung.</p>
+      <div class="ex"><span class="no">✗</span><span>„Du planst immer alles ohne mich.“</span><span class="yes">✓</span><span>„Am Wochenende haben wir an beiden Tagen das gemacht, was du vorgeschlagen hast.“</span>
+      <span class="no">✗</span><span>„Du bist so unzuverlässig.“</span><span class="yes">✓</span><span>„Du bist heute 40 Minuten später gekommen als ausgemacht.“</span></div>
+      <p><b>Stolperfallen:</b> Wörter wie <i>immer, nie, ständig, schon wieder, typisch</i> und Eigenschaften über Personen (<i>egoistisch, faul, rücksichtslos</i>).</p>
+      <p><b>Test:</b> Würde eine Kamera genau das aufnehmen?</p>`,true),
+    acc('2 · Gefühl statt Gedanke',`
+      <p>Gefühle beschreiben, was in <i>mir</i> vorgeht. Vieles, was wie ein Gefühl klingt, ist eigentlich eine Interpretation dessen, was der andere getan hat – ein <b>Pseudogefühl</b>.</p>
+      <div class="ex"><span class="no">✗</span><span>„Ich fühle mich übergangen.“ (= du hast mich übergangen)</span><span class="yes">✓</span><span>„Ich bin enttäuscht.“</span>
+      <span class="no">✗</span><span>„Ich fühle, dass du keine Lust hast.“ (= Gedanke)</span><span class="yes">✓</span><span>„Ich bin verunsichert.“</span></div>
+      <p><b>Test:</b> Passt „Ich <i>bin</i> …“ davor? Steckt eine Handlung des anderen im Wort (<i>übergangen, bevormundet, ausgenutzt</i>), ist es ein Pseudogefühl → siehe Liste im Reiter <i>Listen</i>.</p>
+      <p><b>Tipp:</b> Spür zuerst in den Körper (Kiefer, Schultern, Bauch). Körpersignale sind oft schneller als die Worte.</p>`),
+    acc('3 · Bedürfnis statt Strategie',`
+      <p>Bedürfnisse sind universell: Alle Menschen haben sie, und sie hängen nicht an einer bestimmten Person, Handlung oder Uhrzeit. <b>Strategien</b> sind die konkreten Wege, sie zu erfüllen – darüber lässt sich verhandeln.</p>
+      <div class="ex"><span class="no">✗</span><span>„Ich brauche, dass du mich heute Abend in Ruhe lässt.“ (Strategie)</span><span class="yes">✓</span><span>„Mir ist heute Abend Ruhe wichtig.“ (Bedürfnis)</span></div>
+      <p><b>Verantwortung bei mir:</b> Gefühle entstehen aus meinen Bedürfnissen, nicht aus dem Verhalten anderer. Statt „Ich bin frustriert, <i>weil du</i> …“ → „Ich bin frustriert, <i>weil mir</i> … wichtig ist.“</p>
+      <p><b>Wichtig für dich:</b> Ein eigenes Bedürfnis zu nennen ist kein Vorwurf und nicht egoistisch. Es macht für andere sichtbar, was in dir lebendig ist. Wenn beide Bedürfnisse auf dem Tisch liegen, findet sich oft eine Strategie, die für beide passt.</p>`),
+    acc('4 · Bitte statt Forderung',`
+      <p>Eine Bitte ist <b>konkret</b>, <b>positiv</b> (was ich möchte, nicht was ich nicht möchte) und <b>jetzt machbar</b>.</p>
+      <div class="ex"><span class="no">✗</span><span>„Du sollst mehr Rücksicht nehmen.“</span><span class="yes">✓</span><span>„Wärst du bereit, dass wir am Sonntag vormittags zusammen planen, was wir machen?“</span></div>
+      <p><b>Bitte oder Forderung?</b> Das zeigt sich am Nein. Wenn ich ein Nein nicht hören kann, ohne Druck oder Schuld zu machen, war es eine Forderung.</p>
+      <p><b>Zwei Arten:</b> <i>Handlungsbitte</i> („Wärst du bereit, …?“) und <i>Verbindungsbitte</i> („Wie geht es dir mit dem, was ich gesagt habe?“ / „Magst du mir sagen, was du gehört hast?“).</p>`),
+    acc('Empathisch zuhören',`
+      <p>Beim Zuhören geht es darum, die Gefühle und Bedürfnisse hinter den Worten zu erraten – nicht ums Lösen.</p>
+      <div class="ex"><span class="yes">✓</span><span>„Bist du enttäuscht, weil dir gemeinsame Zeit wichtig war?“</span></div>
+      <p><b>Was Empathie blockiert:</b> sofort Ratschläge geben, trösten oder beschwichtigen, vergleichen („Das kenn ich …“), korrigieren, die eigene Geschichte erzählen, analysieren.</p>
+      <p><b>Wichtig:</b> Empathie heißt nicht zustimmen und nicht nachgeben. Du kannst ganz verstehen, was der andere braucht – und trotzdem bei deinem Bedürfnis bleiben.</p>`),
+    acc('Selbstempathie',`
+      <p>Die vier Schritte nach innen: Was ist passiert? Was fühle ich? Was brauche ich? Was kann ich mir jetzt geben oder wen möchte ich um etwas bitten?</p>
+      <p><b>Den inneren Kritiker übersetzen:</b> Harte Sätze über dich selbst sind oft ein verzweifelter Ausdruck eines Bedürfnisses.</p>
+      <div class="ex"><span class="no">✗</span><span>„Ich bin so ein Weichei, ich gebe immer nach.“</span><span class="yes">✓</span><span>„Ich bin enttäuscht, weil mir Selbstbestimmung wichtig ist – und ich möchte lernen, dafür einzustehen.“</span></div>`),
+    acc('Nein sagen mit GFK',`
+      <p>Jedes Nein ist ein Ja zu etwas anderem – zu einem eigenen Bedürfnis. Ein Nein mit Bedürfnis klingt nicht nach Ablehnung, sondern nach Klarheit.</p>
+      <div class="ex"><span class="yes">✓</span><span>„Ich merke, dass mir heute Abend Zeit für mich wichtig ist. Deshalb möchte ich nicht mit zu der Feier. Wäre es für dich okay, wenn wir morgen zusammen frühstücken?“</span></div>
+      <p><b>Aufbau:</b> Bedürfnis nennen → Nein zur Strategie → wenn möglich eine andere Strategie anbieten, die auch dem anderen dient.</p>`)
+  )];
+}
+function gfkLists(){
+  const grp=(obj,cls)=>Object.entries(obj).map(([g,l])=>h('div',{class:'mt'},h('div',{class:'small muted',style:'margin-bottom:5px'},g),h('div',{class:'chips'},l.map(w=>h('span',{class:'chip sm on '+cls},w)))));
+  return [
+    card('Gefühle, wenn Bedürfnisse erfüllt sind',null,grp(GF.erfuellt,'moss')),
+    card('Gefühle, wenn Bedürfnisse unerfüllt sind',null,grp(GF.unerfuellt,'rose')),
+    card('Bedürfnisse',null,grp(GF.beduerfnisse,'')),
+    card('Pseudogefühle übersetzen','„Ich fühle mich …“ + eine Handlung des anderen. Darunter liegen meist diese Gefühle und Bedürfnisse:',
+      h('div',{class:'pseudo'},GF.pseudo.map(([p,f,n])=>h('div',{html:`<b>${esc(p)}</b> → ${esc(f)}<br><span class="faint">Bedürfnis: ${esc(n)}</span>`}))))
+  ];
+}
+function allFeel(){return Object.values(GF.unerfuellt).flat().concat(Object.values(GF.erfuellt).flat())}
+function allNeeds(){const own=live(S.data.needs).map(n=>n.name);return [...new Set([...own,...Object.values(GF.beduerfnisse).flat()])]}
+function gfkPractice(){
+  return [miniCheck(),selfEmpathy(),prepTalk(),exerciseCard(false)];
+}
+function miniCheck(){
+  const M=S.mini;const fe=allFeel(),ne=allNeeds();
+  const sentence=(M.feel.length||M.need.length)?`Ich bin gerade ${M.feel.join(' und ')||'…'}, weil mir ${M.need.join(' und ')||'…'} wichtig ist.`:'';
+  return h('div',{class:'card'},h('details',{class:'acc',open:M.open?true:null,ontoggle:e=>M.open=e.target.open},
+    h('summary',null,'⏱️ Mini-Check (30 Sekunden)'),
+    h('p',{class:'sub'},'Was fühle ich gerade? Was brauche ich? Mehr nicht.'),
+    h('label',{class:'lbl'},'Gefühl'),h('div',{class:'chips'},(M.allF?fe:fe.filter((_,i)=>i%2===0)).map(f=>chip(f,M.feel.includes(f),()=>{M.feel=toggle(M.feel,f);rr()},'sm lilac'))),
+    h('button',{class:'link',onclick:()=>{M.allF=!M.allF;rr()}},M.allF?'weniger':'mehr Gefühle'),
+    h('label',{class:'lbl'},'Bedürfnis'),h('div',{class:'chips'},(M.allN?ne:ne.slice(0,12)).map(n=>chip(n,M.need.includes(n),()=>{M.need=toggle(M.need,n);rr()},'sm moss'))),
+    h('button',{class:'link',onclick:()=>{M.allN=!M.allN;rr()}},M.allN?'weniger':'mehr Bedürfnisse'),
+    sentence&&h('div',{class:'gfk-prev'},sentence),
+    sentence&&h('button',{class:'btn sm mt',onclick:()=>{const x=getDay(today());x.checks.push({id:uid(),type:'mini',text:sentence,t:now()});touch(x);S.mini={feel:[],need:[],open:true};rr();toast('Im Tagebuch gespeichert ✓')}},'Im Tagebuch speichern')));
+}
+function selfEmpathy(){
+  const open=!!S.se;const E=S.se||{};
+  const F=(k,ph,rows)=>h('textarea',{class:'field',rows:rows||2,placeholder:ph,value:E[k]||'',oninput:e=>{S.se=S.se||{};S.se[k]=e.target.value}});
+  const fe=Object.values(GF.unerfuellt).flat(),ne=allNeeds();
+  return h('div',{class:'card'},h('details',{class:'acc',open:open||null,ontoggle:e=>{if(e.target.open&&!S.se)S.se={};if(!e.target.open)S.se=null}},
+    h('summary',null,'🫶 Selbstempathie nach dem Nachgeben'),
+    h('p',{class:'sub'},'Zwei Minuten für dich – ohne Urteil.'),
+    h('label',{class:'lbl'},'1 · Was ist passiert? (nur Beobachtung)'),F('obs','Wir haben …'),
+    h('label',{class:'lbl'},'2 · Was sagt die strenge Stimme in mir? (darf raus)'),F('critic','„Ich hätte …“'),
+    h('label',{class:'lbl'},'3 · Was fühle ich darunter?'),h('div',{class:'chips'},fe.map(f=>chip(f,(E.feel||[]).includes(f),()=>{S.se.feel=toggle(S.se.feel,f);rr()},'sm lilac'))),
+    h('label',{class:'lbl'},'4 · Welches Bedürfnis kam zu kurz?'),h('div',{class:'chips'},ne.slice(0,18).map(n=>chip(n,(E.need||[]).includes(n),()=>{S.se.need=toggle(S.se.need,n);rr()},'sm moss'))),
+    h('label',{class:'lbl'},'5 · Was kann ich mir jetzt geben – oder was sage ich nächstes Mal?'),F('next','…'),
+    (E.feel||[]).length||(E.need||[]).length?h('div',{class:'gfk-prev'},`Ich bin ${(E.feel||[]).join(' und ')||'…'}, weil mir ${(E.need||[]).join(' und ')||'…'} wichtig ist. Das ist okay – und es zählt.`):null,
+    h('button',{class:'btn sm mt',onclick:()=>{
+      const t=[E.obs&&'Passiert: '+E.obs,(E.feel||[]).length&&'Gefühl: '+E.feel.join(', '),(E.need||[]).length&&'Bedürfnis: '+E.need.join(', '),E.next&&'Nächstes Mal / jetzt: '+E.next].filter(Boolean).join(' · ');
+      if(!t){toast('Noch leer');return}
+      const x=getDay(today());x.checks.push({id:uid(),type:'se',text:t,t:now()});touch(x);S.se=null;rr();toast('Gespeichert ✓')}},'Im Tagebuch speichern')));
+}
+function prepTalk(){
+  const P=S.prep;
+  const F=(k,lbl,ph)=>[h('label',{class:'lbl'},lbl),h('input',{class:'field',placeholder:ph,value:P[k]||'',oninput:e=>{P[k]=e.target.value;pv.textContent=gfkSentence(P)||'…'}})];
+  const pv=h('div',{class:'gfk-prev'},gfkSentence(P)||'Dein Satz erscheint hier …');
+  return h('div',{class:'card'},h('details',{class:'acc',open:P.open?true:null,ontoggle:e=>P.open=e.target.open},
+    h('summary',null,'💬 Gespräch vorbereiten'),
+    F('obs','Beobachtung: Wenn …','wir unsere Abende planen'),
+    F('feel','Gefühl: … fühle ich mich …','oft unzufrieden'),
+    F('need','Bedürfnis: … weil mir … wichtig ist','Zeit für mich'),
+    F('req','Bitte: Wärst du bereit, …?','dass ich mir jeden Dienstag zwei Stunden nehme'),
+    pv,
+    F('other','Was fühlt / braucht die andere Person vermutlich?','z. B. Nähe, Verlässlichkeit'),
+    F('planb','Wenn ein Nein kommt: welche andere Strategie gäbe es?','z. B. anderer Tag'),
+    h('button',{class:'btn sm mt',onclick:()=>{const s=gfkSentence(P);if(!s){toast('Noch leer');return}
+      const extra=[P.other&&'Die andere Seite braucht vielleicht: '+P.other,P.planb&&'Plan B: '+P.planb].filter(Boolean).join(' · ');
+      S.data.talk.push({id:uid(),text:s+(extra?' ('+extra+')':''),done:false,u:now()});touch();S.prep={};S.ichTab='gespraech';go('ich');toast('Zu den Gesprächsnotizen hinzugefügt ✓')}},'Zu Gesprächsnotizen hinzufügen')));
+}
+
+/* ---------- EINSTELLUNGEN ---------- */
+function importButton(label){
+  const inp=h('input',{type:'file',accept:'.json,application/json',style:'display:none',onchange:async e=>{
+    const f=e.target.files[0];if(!f)return;
+    try{const j=JSON.parse(await f.text());await importJson(j)}catch(err){toast('Import fehlgeschlagen: '+(err.message||err))}
+    e.target.value='';}});
+  return h('span',null,inp,h('button',{class:'btn ghost',onclick:()=>inp.click()},label));
+}
+async function importJson(j){
+  if(j.ct&&j.iv){ // verschlüsseltes Backup
+    let key=S.key;
+    if(j.salt!==CFG.salt){const p=prompt('Passphrase des Backups:');if(!p)return;key=await deriveKey(p,j.salt,j.iter)}
+    const data=await decWith(key,j);S.data=mergeDocs(S.data,data);S.data.updatedAt=now();touch();rr();toast('Backup importiert ✓');return;
+  }
+  if(j.type!=='beduerfnis-startdaten')throw new Error('Unbekanntes Format');
+  const D=S.data;
+  if(j.profile)D.profile={...D.profile,...j.profile};
+  if(j.needs){
+    const untouched=!Object.keys(D.days).length&&!D.logs.length;
+    if(untouched)D.needs=[];
+    j.needs.forEach(n=>{const ex=D.needs.find(x=>x.name===n.name);if(ex){ex.icon=n.icon||ex.icon;ex.u=now()}else D.needs.push({id:uid(),name:n.name,icon:n.icon||'',u:now()})});
+    j.needs.forEach(n=>(n.activities||[]).forEach(t=>{const nd=D.needs.find(x=>x.name===n.name);const list=D.activities[nd.id]=D.activities[nd.id]||[];
+      if(!list.some(a=>a.id===t.toLowerCase()))list.push({id:t.toLowerCase(),text:t,n:0,last:null,u:now()})}));
+  }
+  const fresh=!Object.keys(D.days).length&&!D.logs.length;
+  ['signals','feelings','contexts','people'].forEach(k=>{if(j[k]){if(fresh)D[k]=[];j[k].forEach(t=>addToList(k,t))}});
+  (j.affirmations||[]).forEach(t=>{if(!D.affirmations.some(a=>a.text===t&&!a.del))D.affirmations.push({id:uid(),text:t,u:now()})});
+  (j.talk||[]).forEach(t=>{if(!D.talk.some(a=>a.text===t&&!a.del))D.talk.push({id:uid(),text:t,done:false,u:now()})});
+  if(j.blocks&&j.blocks.length){const w=getWeek(isoWeek(today()));j.blocks.forEach(b=>{if(!w.blocks.some(x=>x.what===b.what))w.blocks.push({id:uid(),day:b.day,time:b.time||'',dur:b.dur||'',what:b.what,need:(D.needs.find(n=>n.name===b.need)||{}).id||null,status:'offen',u:now()})})}
+  D.imported=true;touch();rr();toast('Startdaten importiert ✓ – die Datei kannst du jetzt löschen');
+}
+function listEditor(key,title,withIcon){
+  const items=live(S.data[key]);
+  return h('details',{class:'acc'},h('summary',null,title+' ('+items.length+')'),
+    items.map(x=>h('div',{class:'row',style:'margin:6px 0'},
+      withIcon&&h('input',{class:'field',style:'width:52px;text-align:center;padding:8px 4px',value:x.icon||'',oninput:e=>{x.icon=e.target.value.trim();x.u=now();touch()}}),
+      h('input',{class:'field grow',value:x.name,onchange:e=>{const v=e.target.value.trim();if(v){x.name=v;x.u=now();touch()}}}),
+      h('button',{class:'iconbtn',onclick:()=>{if(confirm(`„${x.name}“ entfernen? Bisherige Einträge bleiben erhalten.`)){x.del=true;x.u=now();touch();rr()}},'aria-label':'entfernen'},'×'))),
+    adder('Neu …',t=>{const it=addToList(key,t);if(withIcon&&!it.icon)it.icon='🌿';touch();rr()}));
+}
+function vSettings(){
+  const f={owner:CFG.owner||'waswollenwirkochen',repo:CFG.repo||'beduerfnisse-data',token:''};
+  const I=(k,ph,type='text')=>h('input',{class:'field',type,placeholder:ph,value:f[k],autocomplete:'off',autocapitalize:'off',spellcheck:'false',oninput:e=>f[k]=e.target.value.trim()});
+  const pw={old:'',n1:'',n2:''};const pwErr=h('div',{class:'err'});
+  const last=S.sync.last?new Date(S.sync.last).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'–';
+  return [
+    card('Sync',null,
+      h('div',{class:'row'},h('span',{class:'dot '+S.sync.state}),h('span',{class:'small'},syncLabel())),
+      hasRemote()&&h('div',{class:'small faint mt'},`${CFG.owner}/${CFG.repo} · zuletzt ${last}`),
+      hasRemote()&&h('button',{class:'btn ghost full mt',onclick:()=>syncNow(true).then(rr)},'Jetzt synchronisieren'),
+      h('details',{class:'acc mt'},h('summary',null,hasRemote()?'GitHub-Verbindung ändern':'GitHub-Sync einrichten'),
+        h('label',{class:'lbl'},'GitHub-Account'),I('owner','Account'),
+        h('label',{class:'lbl'},'Daten-Repo (privat)'),I('repo','Repo'),
+        h('label',{class:'lbl'},'Token'+(S.token?' (leer lassen = bisheriger)':'')),I('token','github_pat_…','password'),
+        h('button',{class:'btn full mt',onclick:async()=>{
+          const tok=f.token||S.token;if(!tok||!f.owner||!f.repo){toast('Bitte alles ausfüllen');return}
+          CFG.owner=f.owner;CFG.repo=f.repo;CFG.path=CFG.path||'diary.enc.json';S.token=tok;CFG.tokenEnv=await encWith(S.key,tok);saveCfg();
+          S.dirty=true;await syncNow(true);rr()}},'Speichern & verbinden'),
+        hasRemote()&&h('button',{class:'link mt',style:'color:var(--rose)',onclick:()=>{CFG.owner='';CFG.repo='';CFG.tokenEnv=null;S.token=null;saveCfg();setSync('off');rr()}},'Sync auf diesem Gerät trennen'))),
+    card('Persönliches',null,
+      h('label',{class:'lbl'},'Dein Name (für die Begrüßung)'),h('input',{class:'field',value:S.data.profile.name||'',oninput:e=>{S.data.profile.name=e.target.value;touch()}}),
+      h('label',{class:'lbl'},'Name der Person für Gesprächsnotizen'),h('input',{class:'field',value:S.data.profile.partner||'',oninput:e=>{S.data.profile.partner=e.target.value;touch()}})),
+    card('Deine Listen','Umbenennen, Emoji ändern, ergänzen.',
+      listEditor('needs','Kernbedürfnisse',true),listEditor('signals','Körpersignale'),listEditor('feelings','Gefühle im Log'),
+      listEditor('contexts','Bereiche im Log'),listEditor('people','Beteiligte im Log')),
+    card('Sperre','Nach wie vielen Minuten ohne Nutzung (oder im Hintergrund) gesperrt wird.',
+      h('div',{class:'chips'},[1,3,5,10,30].map(m=>chip(m+' min',(CFG.lockMin||5)===m,()=>{CFG.lockMin=m;saveCfg();rr()}))),
+      h('button',{class:'btn ghost full mt',onclick:lock},'🔒 Jetzt sperren')),
+    card('Backup & Import',null,
+      h('div',{class:'row wrap'},
+        h('button',{class:'btn ghost',onclick:async()=>{const env=await makeEnvelope(S.data);const a=h('a',{href:URL.createObjectURL(new Blob([JSON.stringify(env)],{type:'application/json'})),download:`beduerfnis-backup-${today()}.json`});document.body.append(a);a.click();a.remove()}},'⬇︎ Verschlüsseltes Backup'),
+        importButton('⬆︎ Import')),
+      h('p',{class:'small faint mt'},'Import: verschlüsseltes Backup oder startdaten.json.')),
+    card('Passphrase ändern','Danach brauchst du auf anderen Geräten die neue Passphrase (dort einmal zurücksetzen und neu einrichten).',
+      h('input',{class:'field',type:'password',placeholder:'aktuelle Passphrase',autocomplete:'current-password',oninput:e=>pw.old=e.target.value}),h('div',{style:'height:8px'}),
+      h('input',{class:'field',type:'password',placeholder:'neue Passphrase',autocomplete:'new-password',oninput:e=>pw.n1=e.target.value}),h('div',{style:'height:8px'}),
+      h('input',{class:'field',type:'password',placeholder:'neue Passphrase wiederholen',autocomplete:'new-password',oninput:e=>pw.n2=e.target.value}),
+      h('button',{class:'btn ghost full mt',onclick:async()=>{
+        pwErr.textContent='';
+        try{const k=await deriveKey(pw.old,CFG.salt,CFG.iter);await decWith(k,JSON.parse(localStorage.getItem(LS_VAULT)))}catch(e){pwErr.textContent='Aktuelle Passphrase stimmt nicht.';return}
+        if(pw.n1.length<8||pw.n1!==pw.n2){pwErr.textContent='Neue Passphrase: mind. 8 Zeichen, beide gleich.';return}
+        if(hasRemote()){try{await syncNow()}catch(e){}}
+        CFG.salt=b64(crypto.getRandomValues(new Uint8Array(16)));CFG.iter=ITER;S.key=await deriveKey(pw.n1,CFG.salt,CFG.iter);
+        if(S.token)CFG.tokenEnv=await encWith(S.key,S.token);saveCfg();const env=await saveLocal();
+        if(hasRemote()){try{const r=await ghGet();await ghPut(env,r&&r.sha);setSync('ok','')}catch(e){setSync('error',e.message)}}
+        toast('Passphrase geändert ✓');rr()}},'Passphrase ändern'),pwErr),
+    card('Auf diesem Gerät',null,
+      h('button',{class:'btn danger full',onclick:()=>{if(confirm('Alle lokalen Daten auf diesem Gerät löschen? Was auf GitHub liegt, bleibt erhalten.')){localStorage.removeItem(LS_VAULT);localStorage.removeItem(LS_CFG);CFG=null;S.key=null;S.data=null;S.token=null;render()}}},'Lokale Daten löschen')),
+    h('p',{class:'center faint small'},'Verschlüsselung: AES-256-GCM · PBKDF2-SHA256 ('+(CFG.iter||ITER).toLocaleString('de-DE')+' Runden) · keine externen Anfragen außer api.github.com')
+  ];
+}
+
+/* ---------- Start ---------- */
+loadCfg();render();
+</script>
+</body>
+</html>
