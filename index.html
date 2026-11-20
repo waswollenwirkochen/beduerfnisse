@@ -97,8 +97,8 @@ label.lbl{display:block;font-size:.82rem;color:var(--muted);margin:12px 0 5px}
 .addrow .btn{padding:8px 13px}
 
 /* scale */
-.scale{display:grid;grid-template-columns:repeat(11,1fr);gap:4px}
-.scale button{aspect-ratio:1;border-radius:50%;border:1px solid var(--line);font-size:.85rem;color:var(--muted);background:rgba(241,232,214,.03);max-width:42px;justify-self:center;width:100%}
+.scale{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:3px}
+.scale button{aspect-ratio:1;padding:0;min-width:0;border-radius:50%;border:1px solid var(--line);font-size:.82rem;color:var(--muted);background:rgba(241,232,214,.03);max-width:42px;justify-self:center;width:100%}
 .scale button.on{background:var(--amber);color:#2a1e0c;border-color:var(--amber);font-weight:700;box-shadow:0 0 14px rgba(233,184,114,.45)}
 .scale-l{display:flex;justify-content:space-between;font-size:.74rem;color:var(--faint);margin-top:5px}
 
@@ -299,7 +299,7 @@ let CFG=null;
 function loadCfg(){try{CFG=JSON.parse(localStorage.getItem(LS_CFG)||'null')}catch(e){CFG=null}}
 function saveCfg(){localStorage.setItem(LS_CFG,JSON.stringify(CFG))}
 const S={key:null,token:null,data:null,view:'heute',date:today(),week:isoWeek(today()),ichTab:'rueckblick',gfkTab:'ueberblick',
-  range:30,affIdx:null,baq:{},logDraft:null,blockDraft:null,exShift:0,editAct:{},mini:{feel:[],need:[]},se:null,prep:{},
+  range:30,affIdx:null,baq:{},logDraft:null,blockDraft:null,exShift:0,editAct:{},mini:{feel:[],need:[]},se:null,prep:{},cats:{},
   dirty:false,sync:{state:'off',last:0,err:'',sha:null}};
 
 const DEFAULT=()=>({
@@ -307,10 +307,10 @@ const DEFAULT=()=>({
   profile:{name:'',partner:''},
   needs:[['Ruhe','🌙'],['Autonomie','🧭'],['Bewegung','🏃'],['Nähe','🤍'],['Freude','✨'],['Zugehörigkeit','🤝']].map(([name,icon])=>({id:uid(),name,icon,u:1})),
   signals:['Verspannungen','Stress','gereizt','unruhig','müde'].map(name=>({id:uid(),name,u:1})),
-  feelings:['enttäuscht','frustriert','wütend','traurig','schuldbewusst','unter Druck','erleichtert'].map(name=>({id:uid(),name,u:1})),
+  feelings:['enttäuscht','frustriert','wütend','traurig','schuldbewusst','unter Druck','erleichtert','stolz','ruhig','unsicher'].map(name=>({id:uid(),name,u:1})),
   contexts:['Tagesplanung','Essen','Freizeit','Urlaub','Feiern'].map(name=>({id:uid(),name,u:1})),
   people:['Partner*in','Freund*innen','Familie','Gruppe'].map(name=>({id:uid(),name,u:1})),
-  activities:{},days:{},logs:[],weeks:{},affirmations:[],talk:[]
+  activities:{},days:{},logs:[],weeks:{},affirmations:[],talk:[],gfkExtra:{feel:[],need:[]},migr:2
 });
 
 let localTimer=null,syncTimer=null;
@@ -338,6 +338,50 @@ function getWeek(k,create=true){
 }
 const needById=id=>S.data.needs.find(n=>n.id===id);
 const nm=(list,id)=>(S.data[list].find(x=>x.id===id)||{}).name||'?';
+
+/* ---------- Aufräumen & Migration ---------- */
+function remap(k,from,to){
+  const D=S.data,sw=a=>[...new Set((a||[]).map(x=>x===from?to:x))];
+  if(k==='needs'){
+    Object.values(D.days).forEach(d=>{let ch=false;
+      if(d.met&&from in d.met){d.met[to]=[...new Set([...(d.met[to]||[]),...d.met[from]])];delete d.met[from];ch=true}
+      if((d.short||[]).includes(from)){d.short=sw(d.short);ch=true}
+      (d.good||[]).forEach(g=>{if((g.needs||[]).includes(from)){g.needs=sw(g.needs);ch=true}});
+      if(ch)d.u=now()});
+    D.logs.forEach(l=>{if(l.need===from){l.need=to;l.u=now()}});
+    Object.values(D.weeks).forEach(w=>{if(w.focus===from)w.focus=to;(w.blocks||[]).forEach(b=>{if(b.need===from){b.need=to;b.u=now()}})});
+    if(D.activities[from]){const t=D.activities[to]=D.activities[to]||[];
+      D.activities[from].forEach(a=>{const e=t.find(x=>x.id===a.id);if(e){e.n=(e.n||0)+(a.n||0);e.del=false;e.u=now()}else t.push({...a,u:now()});a.del=true;a.u=now()})}
+  }
+  if(k==='signals')Object.values(D.days).forEach(d=>{if((d.signals||[]).includes(from)){d.signals=sw(d.signals);d.u=now()}});
+  const lk={feelings:'feel',contexts:'ctx',people:'people'}[k];
+  if(lk)D.logs.forEach(l=>{if((l[lk]||[]).includes(from)){l[lk]=sw(l[lk]);l.u=now()}});
+}
+function cleanup(){
+  const D=S.data;let changed=false;
+  const refs={needs:new Map(),signals:new Map(),feelings:new Map(),contexts:new Map(),people:new Map()};
+  const inc=(k,id)=>{if(id)refs[k].set(id,(refs[k].get(id)||0)+1)};
+  Object.values(D.days).forEach(d=>{Object.keys(d.met||{}).forEach(id=>inc('needs',id));(d.short||[]).forEach(id=>inc('needs',id));
+    (d.signals||[]).forEach(id=>inc('signals',id));(d.good||[]).forEach(g=>(g.needs||[]).forEach(id=>inc('needs',id)))});
+  live(D.logs).forEach(l=>{inc('needs',l.need);(l.feel||[]).forEach(id=>inc('feelings',id));(l.ctx||[]).forEach(id=>inc('contexts',id));(l.people||[]).forEach(id=>inc('people',id))});
+  Object.values(D.weeks).forEach(w=>{inc('needs',w.focus);live(w.blocks).forEach(b=>inc('needs',b.need))});
+  Object.keys(D.activities).forEach(id=>{if((D.activities[id]||[]).some(a=>!a.del&&a.n>0))inc('needs',id)});
+  for(const k of Object.keys(refs)){
+    const r=id=>refs[k].get(id)||0;const byName=new Map();
+    live(D[k]).forEach(x=>{const key=x.name.trim().toLowerCase();const prev=byName.get(key);if(!prev){byName.set(key,x);return}
+      const keep=(r(x.id)>r(prev.id)||(r(x.id)===r(prev.id)&&(x.u||0)>(prev.u||0)))?x:prev;const drop=keep===x?prev:x;
+      remap(k,drop.id,keep.id);refs[k].set(keep.id,r(keep.id)+r(drop.id));drop.del=true;drop.u=now();byName.set(key,keep);changed=true});
+    if(D.imported)live(D[k]).forEach(x=>{if(x.u===1&&!r(x.id)){x.del=true;x.u=now();changed=true}});
+  }
+  return changed;
+}
+function migrate(){
+  const D=S.data;let ch=false;
+  D.logs.forEach(l=>{if(!l.type){l.type='nachgegeben';ch=true}});
+  if((D.migr||0)<2){['erleichtert','stolz','ruhig','klar','verbunden','aufgeregt','unsicher'].forEach(n=>addToList('feelings',n));D.gfkExtra=D.gfkExtra||{feel:[],need:[]};D.migr=2;ch=true}
+  if(cleanup())ch=true;
+  if(ch)touch();
+}
 
 /* ---------- GitHub-Sync ---------- */
 const hasRemote=()=>!!(CFG&&CFG.owner&&CFG.repo&&S.token);
@@ -406,7 +450,7 @@ async function syncNow(manual){
           const before=JSON.stringify(S.data);
           const merged=mergeDocs(S.data,remote);
           changedFromRemote=JSON.stringify(merged)!==before;
-          S.data=merged;
+          S.data=merged;if(cleanup())S.data.updatedAt=now();
           if(JSON.stringify(merged)===JSON.stringify(remote)){S.dirty=false;S.sync.sha=r.sha;await saveLocal();
             if(changedFromRemote)softRender();break}
         }
@@ -450,7 +494,7 @@ function render(){
   const app=$('#app');const y=scrollY;
   if(!S.key){app.replaceChildren(CFG&&localStorage.getItem(LS_VAULT)?vLock():vSetup());return}
   const views={heute:vHeute,log:vLog,woche:vWoche,ich:vIch,gfk:vGfk,settings:vSettings};
-  const titles={heute:'Heute',log:'Nachgeben-Log',woche:'Woche',ich:'Ich',gfk:'GFK',settings:'Einstellungen'};
+  const titles={heute:'Heute',log:'Einstehen & Nachgeben',woche:'Woche',ich:'Ich',gfk:'GFK',settings:'Einstellungen'};
   app.replaceChildren(
     h('div',{class:'top'},
       h('h1',null,titles[S.view]),
@@ -477,7 +521,7 @@ function vLock(){
       const data=await decWith(key,JSON.parse(localStorage.getItem(LS_VAULT)));
       S.key=key;S.data=data;S.token=CFG.tokenEnv?await decWith(key,CFG.tokenEnv):null;
       S.date=today();S.week=isoWeek(today());S.view='heute';lastAct=now();
-      render();if(hasRemote())syncNow();
+      migrate();render();if(hasRemote())syncNow();
     }catch(e){err.textContent='Passphrase stimmt nicht.';inp.select()}
   }
   setTimeout(()=>inp.focus(),50);
@@ -514,7 +558,7 @@ function vSetup(){
         S.key=await deriveKey(f.p1,CFG.salt,CFG.iter);S.data=DEFAULT();
       }
       if(f.token){S.token=f.token;CFG.tokenEnv=await encWith(S.key,f.token)}else{CFG.owner='';CFG.repo=''}
-      saveCfg();await saveLocal();
+      saveCfg();migrate();await saveLocal();
       S.view='heute';render();
       if(hasRemote()){S.dirty=!remote;await syncNow()}
       toast(remote?'Daten von GitHub geladen ✓':'Eingerichtet ✓');
@@ -591,12 +635,13 @@ function vHeute(){
       h('div',{class:'chips'},live(S.data.signals).map(s=>chip(s.name,(D.signals||[]).includes(s.id),()=>upd(x=>{x.signals=toggle(x.signals,s.id)}),'lilac'))),
       adder('anderes Signal …',t=>{const s=addToList('signals',t);upd(x=>{if(!x.signals.includes(s.id))x.signals.push(s.id)})})),
     card('Hat sich gut angefühlt ✨','Kleine Momente, die Kraft gegeben haben.',
-      (D.good||[]).length?h('div',{class:'mb0'},D.good.map(g=>h('div',{class:'spread item'},h('span',null,'· '+g.text),h('button',{class:'faint',onclick:()=>upd(x=>x.good=x.good.filter(y=>y.id!==g.id)),'aria-label':'löschen'},'×')))):null,
-      adder('z. B. Kaffee in der Sonne',t=>upd(x=>x.good.push({id:uid(),text:t,t:now()})))),
+      (D.good||[]).length?h('div',{class:'mb0'},D.good.map(g=>h('div',{class:'spread item'},goodLine(g),h('button',{class:'faint',onclick:()=>upd(x=>x.good=x.good.filter(y=>y.id!==g.id)),'aria-label':'löschen'},'×')))):null,
+      goodComposer(S.date)),
     card('Für dich eingestanden?','Gab es heute einen Moment, in dem es um deine Bedürfnisse ging?',
       h('div',{class:'seg3'},[['ja','💪 Ja'],['nachgegeben','Nachgegeben'],['nicht','Kam nicht vor']].map(([k,l])=>
         h('button',{class:D.stood===k?'on':'',onclick:()=>upd(x=>x.stood=x.stood===k?null:k)},l))),
-      D.stood==='nachgegeben'&&h('button',{class:'btn ghost full mt',onclick:()=>{S.logDraft=newLog(S.date);go('log')}},'📝 Situation im Log festhalten')),
+      D.stood==='nachgegeben'&&h('button',{class:'btn ghost full mt',onclick:()=>{S.logDraft=newLog(S.date,'nachgegeben');go('log')}},'📝 Situation im Log festhalten'),
+      D.stood==='ja'&&h('button',{class:'btn ghost full mt',onclick:()=>{S.logDraft=newLog(S.date,'eingestanden');go('log')}},'💪 Moment im Log festhalten')),
     card('Gedanken',null,h('textarea',{class:'field',placeholder:'Was beschäftigt dich?',value:D.note||'',oninput:e=>{const x=getDay(S.date);x.note=e.target.value;touch(x)}})),
     exerciseCard(true),
     checksList(D),
@@ -631,7 +676,7 @@ function needsMet(D,upd){
 function decAct(nid,text){const a=(S.data.activities[nid]||[]).find(x=>x.id===text.toLowerCase());if(a){a.n=Math.max(0,(a.n||0)-1);a.u=now()}}
 function checksList(D){
   const c=(D.checks||[]);if(!c.length)return null;
-  return card('GFK-Notizen von diesem Tag',null,c.map(x=>h('div',{class:'item'},h('div',{class:'meta'},x.type==='mini'?'Mini-Check':'Selbstempathie'),h('div',null,x.text))));
+  return card('GFK-Notizen von diesem Tag',null,c.map(x=>h('div',{class:'item'},h('div',{class:'meta'},{mini:'Mini-Check',se:'Selbstempathie',prep:'Gesprächsvorbereitung'}[x.type]||''),h('div',null,x.text))));
 }
 function baqCard(){
   const Q=[['Gibt es dir Energie – oder kostet es Energie?','gibt Energie','kostet Energie'],
@@ -651,8 +696,25 @@ function baqCard(){
     Object.keys(a).length?h('button',{class:'link mt',onclick:()=>{S.baq={};rr()}},'neu prüfen'):null));
 }
 
+const EFF=[['kurz','⚡ kurz','Minuten'],['mittel','⏳ mittel','ca. 1–2 h'],['lang','🌄 lang','halber Tag+']];
+function goodLine(g){
+  const tags=[...(g.needs||[]).map(id=>{const n=needById(id);return n?(n.icon||n.name):''}),g.eff?(EFF.find(e=>e[0]===g.eff)||[])[1]:''].filter(Boolean);
+  return h('span',null,'· '+g.text,tags.length?h('span',{class:'faint small'},'  '+tags.join(' ')):null);
+}
+function goodComposer(date){
+  const G=S.goodDraft=S.goodDraft||{text:'',needs:[],eff:null};
+  const tags=h('div',{style:G.text?'':'display:none'},
+    h('div',{class:'small faint mt'},'Optional: Welches Bedürfnis? Wie viel Zeit?'),
+    h('div',{class:'chips mt'},live(S.data.needs).map(n=>chip(needLabel(n),G.needs.includes(n.id),()=>{G.needs=toggle(G.needs,n.id);rr()},'sm moss'))),
+    h('div',{class:'chips mt'},EFF.map(([k,l,d])=>chip(l+' · '+d,G.eff===k,()=>{G.eff=G.eff===k?null:k;rr()},'sm lilac'))));
+  const inp=h('input',{class:'field',placeholder:'z. B. Kaffee in der Sonne',value:G.text,enterkeyhint:'done',
+    oninput:e=>{G.text=e.target.value;tags.style.display=G.text?'':'none'},onkeydown:e=>{if(e.key==='Enter'){e.preventDefault();add()}}});
+  function add(){const t=G.text.trim();if(!t){inp.focus();return}const x=getDay(date);x.good.push({id:uid(),text:t,t:now(),needs:G.needs,eff:G.eff});touch(x);S.goodDraft=null;rr();toast('Gespeichert ✓')}
+  return h('div',null,h('div',{class:'addrow'},inp,h('button',{class:'btn ghost',onclick:add},'＋')),tags);
+}
+
 /* ---------- LOG ---------- */
-function newLog(date){return {id:null,date:date||today(),ctx:[],people:[],need:null,feel:[],what:'',thought:'',gfk:{obs:'',feel:'',need:'',req:''}}}
+function newLog(date,type){return {id:null,type:type||'nachgegeben',date:date||today(),ctx:[],people:[],need:null,feel:[],what:'',thought:'',gfk:{obs:'',feel:'',need:'',req:''}}}
 function gfkSentence(g,fb={}){
   const f=(g.feel||fb.feel||'').trim(),n=(g.need||fb.need||'').trim();
   const o=(g.obs||'').replace(/^wenn\s+/i,'').trim();
@@ -668,52 +730,61 @@ function gfkSentence(g,fb={}){
   return s.trim();
 }
 const logFb=l=>({feel:(l.feel||[]).map(id=>nm('feelings',id)).join(' und '),need:(needById(l.need)||{}).name||''});
+const LT={eingestanden:{icon:'💪',label:'Eingestanden',cls:'moss',need:'Für welches Bedürfnis bist du eingestanden?',thought:'Was hat dir geholfen?',thoughtPh:'z. B. „Meine Bedürfnisse sind legitim“',gfk:'So hast du es gesagt – als GFK-Satz',gfkSub:'Optional: Halte fest, wie du es gesagt hast oder hättest sagen können.'},
+  nachgegeben:{icon:'↩︎',label:'Nachgegeben',cls:'rose',need:'Welches Bedürfnis kam zu kurz?',thought:'Was hast du dir dabei gesagt?',thoughtPh:'z. B. „Ist doch nicht so wichtig“',gfk:'Nächstes Mal – als GFK-Satz',gfkSub:'Leer gelassene Felder werden aus Gefühl & Bedürfnis oben ergänzt.'}};
 function vLog(){
-  const D=S.logDraft;
-  const logs=live(S.data.logs).sort((a,b)=>(b.date+b.created).localeCompare(a.date+a.created));
-  const last30=logs.filter(l=>l.date>=addDays(today(),-29)).length;
+  const D=S.logDraft;const f=S.logFilter||'alle';
+  const all=live(S.data.logs).sort((a,b)=>(b.date+(b.created||'')).localeCompare(a.date+(a.created||'')));
+  const logs=f==='alle'?all:all.filter(l=>l.type===f);
+  const l30=all.filter(l=>l.date>=addDays(today(),-29));
+  if(D)return [logForm(D)];
   return [
-    D?logForm(D):h('button',{class:'btn full',style:'margin-bottom:12px;padding:14px',onclick:()=>{S.logDraft=newLog();rr()}},'＋ Situation festhalten'),
-    !D&&h('div',{class:'card'},h('div',{class:'spread'},h('div',null,h('div',{class:'big'},last30),h('div',{class:'small muted'},'Situationen in 30 Tagen')),
-      h('button',{class:'btn ghost sm',onclick:()=>{S.gfkTab='ueben';S.se={};go('gfk')}},'🫶 Selbstempathie'))),
-    !D&&(logs.length?card('Bisherige Situationen',null,logs.map(l=>{
-      const n=needById(l.need);
+    h('div',{class:'row',style:'margin-bottom:12px'},
+      h('button',{class:'btn grow',style:'padding:14px 8px;background:var(--moss);color:#14201a',onclick:()=>{S.logDraft=newLog(today(),'eingestanden');rr()}},'💪 Eingestanden'),
+      h('button',{class:'btn grow',style:'padding:14px 8px;background:var(--rose);color:#2a1410',onclick:()=>{S.logDraft=newLog(today(),'nachgegeben');rr()}},'↩︎ Nachgegeben')),
+    h('div',{class:'card'},h('div',{class:'kpis'},kpi(l30.filter(l=>l.type==='eingestanden').length,'eingestanden (30 T.)'),kpi(l30.filter(l=>l.type==='nachgegeben').length,'nachgegeben (30 T.)'),
+      h('button',{class:'kpi',onclick:()=>{S.gfkTab='ueben';S.se={};go('gfk')}},h('div',{class:'v'},'🫶'),h('div',{class:'l'},'Selbst­empathie')))),
+    all.length?h('div',{class:'seg'},[['alle','Alle'],['eingestanden','Eingestanden'],['nachgegeben','Nachgegeben']].map(([k,l])=>h('button',{class:f===k?'on':'',onclick:()=>{S.logFilter=k;rr()}},l))):null,
+    logs.length?card(null,null,logs.map(l=>{
+      const n=needById(l.need);const t=LT[l.type]||LT.nachgegeben;
       return h('div',{class:'item',style:'cursor:pointer',onclick:()=>{S.logDraft=clone(l);rr();scrollTo(0,0)}},
-        h('div',{class:'meta'},fmtShort(l.date),' · ',[...l.ctx.map(id=>nm('contexts',id)),...l.people.map(id=>nm('people',id))].join(', ')),
-        h('div',null,n?needLabel(n)+' kam zu kurz':'',l.what?(n?' – ':'')+l.what:''),
-        l.thought&&h('div',{class:'small muted'},'Gedanke: „'+l.thought+'“'),
+        h('div',{class:'meta'},h('span',{style:`color:var(--${t.cls})`},t.icon+' '+t.label),' · ',fmtShort(l.date),[...l.ctx.map(id=>nm('contexts',id)),...l.people.map(id=>nm('people',id))].map(x=>' · '+x).join('')),
+        h('div',null,n?needLabel(n):'',l.what?(n?' – ':'')+l.what:''),
+        l.thought&&h('div',{class:'small muted'},'„'+l.thought+'“'),
         gfkSentence(l.gfk||{},logFb(l))&&h('div',{class:'gfk-prev'},gfkSentence(l.gfk||{},logFb(l))));
-    })):h('p',{class:'center muted small mt2'},'Noch keine Einträge. Nachgeben ist kein Fehler – es zu bemerken ist der erste Schritt.'))
+    })):h('p',{class:'center muted small mt2'},all.length?'Keine Einträge in diesem Filter.':'Noch keine Einträge. Halte fest, wann du für dich eingestanden bist – und wann nicht. Beides zu bemerken ist der Anfang.')
   ];
 }
 function logForm(D){
+  const t=LT[D.type]||LT.nachgegeben;
   const set=(k,v)=>{D[k]=v};
   const T=(k,ph,rows)=>h(rows?'textarea':'input',{class:'field',placeholder:ph,value:D[k]||'',rows:rows||null,oninput:e=>set(k,e.target.value)});
   const G=(k,ph)=>h('input',{class:'field',placeholder:ph,value:D.gfk[k]||'',oninput:e=>{D.gfk[k]=e.target.value;prev.textContent=gfkSentence(D.gfk,fb())||'…'}});
-  const fb=()=>({feel:D.feel.map(id=>nm('feelings',id)).join(' und '),need:D.need?needById(D.need)?.name:''});
+  const fb=()=>logFb(D);
   const prev=h('div',{class:'gfk-prev'},gfkSentence(D.gfk,fb())||'Dein Satz erscheint hier …');
   const chipsOf=(list,key,cls,single)=>h('div',{class:'chips'},live(S.data[list]).map(x=>chip(list==='needs'?needLabel(x):x.name,single?D[key]===x.id:D[key].includes(x.id),()=>{
     D[key]=single?(D[key]===x.id?null:x.id):toggle(D[key],x.id);rr()},cls)));
-  async function save(){
+  function save(){
     const e=D.id?S.data.logs.find(x=>x.id===D.id):null;
     const rec={...clone(D),u:now()};
     if(e)Object.assign(e,rec);else{rec.id=uid();rec.created=new Date().toISOString();S.data.logs.push(rec)}
     S.logDraft=null;touch();rr();toast('Gespeichert ✓');
   }
   return h('div',{class:'card'},
-    h('div',{class:'spread'},h('h2',null,D.id?'Situation bearbeiten':'Neue Situation'),
+    h('div',{class:'seg3',style:'margin-bottom:12px'},Object.entries(LT).map(([k,v])=>h('button',{class:D.type===k?'on':'',onclick:()=>{D.type=k;rr()}},v.icon+' '+v.label))),
+    h('div',{class:'spread'},h('h2',null,D.id?'Eintrag bearbeiten':'Neuer Eintrag'),
       h('input',{type:'date',class:'field',style:'width:auto;padding:6px 8px',value:D.date,max:today(),onchange:e=>set('date',e.target.value||today())})),
+    h('label',{class:'lbl'},t.need),chipsOf('needs','need',t.cls,true),
     h('label',{class:'lbl'},'Bereich'),chipsOf('contexts','ctx',''),
-    adder('anderer Bereich …',t=>{const c=addToList('contexts',t);D.ctx=[...new Set([...D.ctx,c.id])];touch();rr()}),
+    adder('anderer Bereich …',x=>{const c=addToList('contexts',x);D.ctx=[...new Set([...D.ctx,c.id])];touch();rr()}),
     h('label',{class:'lbl'},'Wer war beteiligt?'),chipsOf('people','people',''),
-    adder('andere …',t=>{const c=addToList('people',t);D.people=[...new Set([...D.people,c.id])];touch();rr()}),
-    h('label',{class:'lbl'},'Welches Bedürfnis kam zu kurz?'),chipsOf('needs','need','rose',true),
+    adder('andere …',x=>{const c=addToList('people',x);D.people=[...new Set([...D.people,c.id])];touch();rr()}),
     h('label',{class:'lbl'},'Was hast du gefühlt?'),chipsOf('feelings','feel','lilac'),
-    adder('anderes Gefühl …',t=>{const c=addToList('feelings',t);D.feel=[...new Set([...D.feel,c.id])];touch();rr()}),
+    adder('anderes Gefühl …',x=>{const c=addToList('feelings',x);D.feel=[...new Set([...D.feel,c.id])];touch();rr()}),
     h('label',{class:'lbl'},'Was ist passiert?'),T('what','kurz, ohne zu bewerten',2),
-    h('label',{class:'lbl'},'Was hast du dir dabei gesagt?'),T('thought','z. B. „Ist doch nicht so wichtig“'),
-    h('h3',null,'🕊️ Nächstes Mal – als GFK-Satz'),
-    h('p',{class:'sub'},'Leer gelassene Felder werden aus Gefühl & Bedürfnis oben ergänzt.'),
+    h('label',{class:'lbl'},t.thought),T('thought',t.thoughtPh),
+    h('h3',null,'🕊️ '+t.gfk),
+    h('p',{class:'sub'},t.gfkSub),
     h('label',{class:'lbl'},'Beobachtung: Wenn …'),G('obs','ich höre, dass der Abend schon verplant ist'),
     h('label',{class:'lbl'},'Gefühl: … fühle ich mich …'),G('feel',fb().feel||'enttäuscht'),
     h('label',{class:'lbl'},'Bedürfnis: … weil mir … wichtig ist'),G('need',fb().need||'Selbstbestimmung'),
@@ -741,20 +812,37 @@ function vWoche(){
   const days=dates.map(d=>S.data.days[d]).filter(Boolean);
   const sc=days.filter(d=>d.scale!=null).map(d=>d.scale);
   const B=S.blockDraft;
+  const wl=live(S.data.logs).filter(l=>l.date>=dates[0]&&l.date<=dates[6]);
+  const goodN=days.reduce((s2,d)=>s2+(d.good||[]).length,0);
+  const cm={},cs={};days.forEach(d=>{Object.keys(d.met||{}).forEach(id=>{if(needById(id)&&!needById(id).del)cm[id]=(cm[id]||0)+1});(d.short||[]).forEach(id=>{if(needById(id)&&!needById(id).del)cs[id]=(cs[id]||0)+1})});
+  const topMet=Object.entries(cm).sort((a,b)=>b[1]-a[1]).slice(0,4),topShort=Object.entries(cs).sort((a,b)=>b[1]-a[1]).slice(0,4);
   return [
     h('div',{class:'datenav'},
       h('button',{class:'arr',onclick:()=>{S.week=shiftWeek(k,-1);rr()}},'‹'),
       h('div',{class:'d'},h('b',null,'KW '+Number(k.split('-W')[1])),h('span',null,fmtLong(dates[0])+' – '+fmtLong(dates[6])),
         !cur&&h('div',null,h('button',{class:'link',onclick:()=>{S.week=isoWeek(today());rr()}},'→ diese Woche'))),
       h('button',{class:'arr',onclick:()=>{S.week=shiftWeek(k,1);rr()}},'›')),
-    card('Wochenfokus','Welches Bedürfnis willst du diese Woche bewusster berücksichtigen?',
+    card('Wochenbilanz',null,h('div',{class:'kpis'},
+      kpi(days.filter(d=>d.scale!=null||Object.keys(d.met||{}).length).length+'/7','Abende eingetragen'),
+      kpi(sc.length?avg(sc).toFixed(1).replace('.',','):'–','Ø Selbstfürsorge'),
+      kpi(goodN,'gute Momente')),
+      h('div',{class:'kpis mt'},
+      kpi(wl.filter(l=>l.type==='eingestanden').length,'mal eingestanden'),
+      kpi(wl.filter(l=>l.type==='nachgegeben').length,'mal nachgegeben'),
+      kpi(days.filter(d=>d.ex&&d.ex.done).length,'GFK-Übungen')),
+      topMet.length?[h('h3',null,'Am häufigsten erfüllt'),h('div',{class:'chips'},topMet.map(([id,c])=>h('span',{class:'chip sm on moss'},needLabel(needById(id)),h('span',{class:'n'},c+'×'))))]:null,
+      topShort.length?[h('h3',null,'Kam zu kurz'),h('div',{class:'chips'},topShort.map(([id,c])=>h('span',{class:'chip sm on rose'},needLabel(needById(id)),h('span',{class:'n'},c+'×'))))]:null),
+    h('div',{class:'card'},h('details',{class:'acc',open:(W.focus||blocks.length||B)?true:null},
+      h('summary',null,'🧭 Wochenfokus & Zeitblöcke (optional)'),
+      h('p',{class:'sub'},'Nur wenn du magst – das Tagebuch funktioniert auch ohne Planung.'),
+      h('h3',null,'Wochenfokus'),h('p',{class:'sub'},'Welches Bedürfnis willst du diese Woche bewusster berücksichtigen?'),
       h('div',{class:'chips'},live(S.data.needs).map(n=>chip(needLabel(n),W.focus===n.id,()=>updW(w=>w.focus=w.focus===n.id?null:n.id)))),
       fn&&h('textarea',{class:'field mt',rows:2,placeholder:'Wie willst du ihm Raum geben?',value:W.focusNote||'',oninput:e=>{getWeek(k).focusNote=e.target.value;touch()}}),
       fn&&h('div',{class:'mt'},h('div',{class:'small muted'},needLabel(fn)+' diese Woche:'),
         h('div',{class:'days7'},dates.map(d=>{const x=S.data.days[d];const on=x&&x.met&&fn.id in x.met;const sh=x&&(x.short||[]).includes(fn.id);
           return h('div',null,h('i',{class:on?'on':sh?'sh':''}),WD[parse(d).getDay()])})),
-        h('div',{class:'legend'},h('span',null,h('i',{style:'background:var(--moss)'}),'erfüllt'),h('span',null,h('i',{style:'background:var(--rose)'}),'zu kurz')))),
-    card('Zeitblöcke für dich','Vorher Raum schaffen – und dich dann daran halten.',
+        h('div',{class:'legend'},h('span',null,h('i',{style:'background:var(--moss)'}),'erfüllt'),h('span',null,h('i',{style:'background:var(--rose)'}),'zu kurz'))),
+      h('h3',{class:'mt2'},'Zeitblöcke für dich'),h('p',{class:'sub'},'Vorher Raum schaffen – und dich dann daran halten.'),
       blocks.length?h('div',null,blocks.map(b=>{
         const n=needById(b.need);
         return h('div',{class:'block'},
@@ -765,15 +853,8 @@ function vWoche(){
           h('button',{class:'faint',style:'padding:4px',onclick:()=>updW(w=>{const x=w.blocks.find(y=>y.id===b.id);x.del=true;x.u=now()}),'aria-label':'löschen'},'×'));
       })):h('p',{class:'small muted'},'Noch keine Blöcke geplant.'),
       !blocks.length&&prevW&&live(prevW.blocks).length?h('button',{class:'btn ghost full mt',onclick:()=>updW(w=>{live(prevW.blocks).forEach(b=>w.blocks.push({...clone(b),id:uid(),status:'offen',u:now()}))})},'Blöcke der Vorwoche übernehmen'):null,
-      B?blockForm(B,k):h('button',{class:'btn ghost full mt',onclick:()=>{S.blockDraft={day:1,time:'',dur:'2 h',what:'',need:W.focus};rr()}},'＋ Block planen')),
-    card('Wochenbilanz',null,h('div',{class:'kpis'},
-      kpi(days.filter(d=>d.scale!=null||Object.keys(d.met||{}).length).length+'/7','Abende eingetragen'),
-      kpi(sc.length?avg(sc).toFixed(1).replace('.',','):'–','Ø Selbstfürsorge'),
-      kpi(blocks.length?blocks.filter(b=>b.status==='ja').length+'/'+blocks.length:'–','Blöcke gehalten')),
-      h('div',{class:'kpis mt'},
-      kpi(days.filter(d=>d.stood==='ja').length,'mal eingestanden'),
-      kpi(days.filter(d=>d.stood==='nachgegeben').length,'mal nachgegeben'),
-      kpi(days.filter(d=>d.ex&&d.ex.done).length,'GFK-Übungen')))
+      B?blockForm(B,k):h('button',{class:'btn ghost full mt',onclick:()=>{S.blockDraft={day:1,time:'',dur:'2 h',what:'',need:W.focus};rr()}},'＋ Block planen'))),
+
   ];
 }
 function blockForm(B,k){
@@ -797,9 +878,9 @@ const kpi=(v,l)=>h('div',{class:'kpi'},h('div',{class:'v'},v),h('div',{class:'l'
 
 /* ---------- ICH ---------- */
 function vIch(){
-  const tabs=[['rueckblick','Rückblick'],['gut','Gut-Buch'],['saetze','Sätze'],['gespraech','Gespräch']];
+  const tabs=[['rueckblick','Rückblick'],['gut','Gut-Buch'],['saetze','Sätze']];if(S.ichTab==='gespraech')S.ichTab='rueckblick';
   return [h('div',{class:'seg'},tabs.map(([k,l])=>h('button',{class:S.ichTab===k?'on':'',onclick:()=>{S.ichTab=k;rr()}},l))),
-    {rueckblick:vRueck,gut:vGut,saetze:vSaetze,gespraech:vGespraech}[S.ichTab]()];
+    {rueckblick:vRueck,gut:vGut,saetze:vSaetze}[S.ichTab]()];
 }
 function vRueck(){
   const R=S.range;const dates=rangeDays(R);const days=dates.map(d=>[d,S.data.days[d]]).filter(([,x])=>x);
@@ -825,8 +906,8 @@ function vRueck(){
   const sigShort=id=>{const c={};days.forEach(([,x])=>{if((x.signals||[]).includes(id))(x.short||[]).forEach(n=>c[n]=(c[n]||0)+1)});const t=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];return t&&needById(t[0])};
   const overall=scored.length?avg(scored.map(([,x])=>x.scale)):null;
   const lift=needs.filter(n=>scaleBy[n.id].length>=2).map(n=>[n,avg(scaleBy[n.id])]).sort((a,b)=>b[1]-a[1]).slice(0,3);
-  const stood=days.filter(([,x])=>x.stood==='ja').length,gave=days.filter(([,x])=>x.stood==='nachgegeben').length;
-  const logsN=live(S.data.logs).filter(l=>l.date>=dates[0]).length;
+  const rl=live(S.data.logs).filter(l=>l.date>=dates[0]);const stood=rl.filter(l=>l.type==='eingestanden').length,gave=rl.filter(l=>l.type==='nachgegeben').length;
+  const goodN=days.reduce((a,[,x])=>a+(x.good||[]).length,0);
   return [
     h('div',{class:'seg'},[7,30,90].map(n=>h('button',{class:R===n?'on':'',onclick:()=>{S.range=n;rr()}},n+' Tage'))),
     card('Raum für Selbstfürsorge',null,
@@ -843,20 +924,26 @@ function vRueck(){
     topActs.length?card('Häufigste Aktivitäten',null,h('div',{class:'chips'},topActs.map(([k,c])=>{const[nid,t]=k.split('|');const n=needById(nid);return h('span',{class:'chip sm'},(n?n.icon+' ':'')+t,h('span',{class:'n'},c+'×'))}))):null,
     topSig.length?card('Körpersignale','Und welches Bedürfnis an diesen Tagen am häufigsten zu kurz kam.',
       topSig.map(([id,c])=>{const n=sigShort(id);return h('div',{class:'spread item'},h('span',null,nm('signals',id),h('span',{class:'faint small'},'  '+c+'×')),h('span',{class:'small muted'},n?'→ '+needLabel(n):''))})):null,
-    card('Für dich eingestanden',null,h('div',{class:'kpis'},kpi(stood,'mal eingestanden'),kpi(gave,'mal nachgegeben'),kpi(logsN,'Log-Einträge'))),
+    card('Für dich eingestanden','Laut Log.',h('div',{class:'kpis'},kpi(stood,'mal eingestanden'),kpi(gave,'mal nachgegeben'),kpi(goodN,'gute Momente'))),
   ];
 }
 function vGut(){
+  const F=S.gutF=S.gutF||{need:null,eff:null};
   const all=[];Object.entries(S.data.days).forEach(([d,x])=>(x.good||[]).forEach(g=>all.push({...g,d})));
   all.sort((a,b)=>b.d.localeCompare(a.d)||b.t-a.t);
-  if(S.gutPick==null||S.gutPick>=all.length)S.gutPick=Math.floor(Math.random()*Math.max(1,all.length));
-  const r=all[S.gutPick];
-  const grouped={};all.forEach(g=>(grouped[g.d]=grouped[g.d]||[]).push(g));
+  const list=all.filter(g=>(!F.need||(g.needs||[]).includes(F.need))&&(!F.eff||g.eff===F.eff));
+  if(S.gutPick==null||S.gutPick>=list.length)S.gutPick=Math.floor(Math.random()*Math.max(1,list.length));
+  const r=list[S.gutPick];
+  const grouped={};list.forEach(g=>(grouped[g.d]=grouped[g.d]||[]).push(g));
+  const usedNeeds=live(S.data.needs).filter(n=>all.some(g=>(g.needs||[]).includes(n.id)));
   return [
-    r&&h('div',{class:'card aff',onclick:()=>{S.gutPick=Math.floor(Math.random()*all.length);rr()}},h('p',null,r.text),h('small',null,'Erinnerung vom '+fmtShort(r.d)+' · antippen für eine andere')),
-    card('Für heute eintragen',null,adder('Was hat sich gut angefühlt?',t=>{const x=getDay(today());x.good.push({id:uid(),text:t,t:now()});touch(x);rr()})),
-    all.length?card('Alle Momente ('+all.length+')',null,Object.entries(grouped).map(([d,l])=>h('div',{class:'item'},h('div',{class:'meta'},fmtShort(d)),l.map(g=>h('div',null,'· '+g.text))))):
-      h('p',{class:'center muted small'},'Hier sammeln sich die kleinen Dinge, die dir Kraft geben.')
+    card('Für heute eintragen',null,goodComposer(today())),
+    all.length?card('Filtern','Was gibt dir z. B. schnell Freude?',
+      usedNeeds.length?h('div',{class:'chips'},usedNeeds.map(n=>chip(needLabel(n),F.need===n.id,()=>{F.need=F.need===n.id?null:n.id;S.gutPick=null;rr()},'sm moss'))):null,
+      h('div',{class:'chips mt'},EFF.map(([k,l])=>chip(l,F.eff===k,()=>{F.eff=F.eff===k?null:k;S.gutPick=null;rr()},'sm lilac')))):null,
+    r&&h('div',{class:'card aff',onclick:()=>{S.gutPick=Math.floor(Math.random()*list.length);rr()}},h('p',null,r.text),h('small',null,'Erinnerung vom '+fmtShort(r.d)+' · antippen für eine andere')),
+    list.length?card((F.need||F.eff?'Gefiltert':'Alle Momente')+' ('+list.length+')',null,Object.entries(grouped).map(([d,l])=>h('div',{class:'item'},h('div',{class:'meta'},fmtShort(d)),l.map(g=>h('div',null,goodLine(g)))))):
+      h('p',{class:'center muted small'},all.length?'Nichts in diesem Filter.':'Hier sammeln sich die kleinen Dinge, die dir Kraft geben.')
   ];
 }
 function vSaetze(){
@@ -870,21 +957,6 @@ function vSaetze(){
     sug.length?card('Ideen','Antippen zum Übernehmen.',h('div',{class:'chips'},sug.map(s=>h('button',{class:'chip sm',onclick:()=>{S.data.affirmations.push({id:uid(),text:s,u:now()});touch();rr()}},'＋ '+s)))):null
   ];
 }
-function vGespraech(){
-  const p=S.data.profile.partner;const t=live(S.data.talk);const open=t.filter(x=>!x.done),done=t.filter(x=>x.done);
-  const item=x=>h('div',{class:'check'},
-    h('button',{class:'box '+(x.done?'on':''),onclick:()=>{x.done=!x.done;x.u=now();touch();rr()},'aria-label':'besprochen'},x.done?'✓':''),
-    h('div',{class:'grow',style:x.done?'color:var(--faint);text-decoration:line-through':''},x.text),
-    h('button',{class:'faint',onclick:()=>{x.del=true;x.u=now();touch();rr()},'aria-label':'löschen'},'×'));
-  return [
-    card(p?`Fürs Gespräch mit ${p}`:'Gesprächsnotizen','Punkte sammeln, die du ansprechen willst. Abhaken, wenn besprochen.',
-      open.length?open.map(item):h('p',{class:'small muted'},'Gerade nichts offen.'),
-      adder('Was möchtest du ansprechen?',x=>{S.data.talk.push({id:uid(),text:x,done:false,u:now()});touch();rr()}),
-      h('button',{class:'link mt',onclick:()=>{S.gfkTab='ueben';go('gfk')}},'🕊️ Gespräch mit GFK vorbereiten →')),
-    done.length?card('Besprochen',null,done.map(item)):null
-  ];
-}
-
 /* ---------- GFK ---------- */
 const GF={
   erfuellt:{'Frieden':['ruhig','entspannt','gelassen','erleichtert','ausgeglichen'],'Freude':['froh','glücklich','begeistert','verspielt','heiter'],
@@ -949,15 +1021,15 @@ function vGfk(){
 }
 function gfkOverview(){
   return [
-    card('GFK in 30 Sekunden',null,h('div',{class:'prose',html:`
-      <p>Die <b>Gewaltfreie Kommunikation</b> nach Marshall B. Rosenberg geht davon aus: Hinter allem, was Menschen tun und sagen, stehen <b>Bedürfnisse</b>. Konflikte entstehen meist nicht durch die Bedürfnisse selbst, sondern durch die Strategien, mit denen wir sie erfüllen wollen.</p>
-      <div class="formula"><em>Wenn ich …</em> sehe / höre (Beobachtung),<br><em>fühle ich mich …</em> (Gefühl),<br><em>weil mir … wichtig ist.</em> (Bedürfnis)<br><em>Wärst du bereit, …?</em> (Bitte)</div>`})),
     card('Die vier Schritte',null,
       [['Beobachtung','Was ist konkret passiert? So, wie eine Kamera es aufzeichnen würde – ohne Bewertung.'],
        ['Gefühl','Was fühle ich dabei? Ein echtes Gefühl, kein versteckter Vorwurf.'],
        ['Bedürfnis','Was ist mir wichtig – was brauche ich? Unabhängig von einer bestimmten Person.'],
        ['Bitte','Was genau wünsche ich mir jetzt? Konkret, machbar, und ein Nein ist erlaubt.']].map(([t,d],i)=>
         h('div',{class:'step'},h('div',{class:'num'},i+1),h('div',null,h('b',null,t),h('div',{class:'small muted'},d))))),
+    card('Worum es geht',null,h('div',{class:'prose',html:`
+      <p>Die <b>Gewaltfreie Kommunikation</b> nach Marshall B. Rosenberg geht davon aus: Hinter allem, was Menschen tun und sagen, stehen <b>Bedürfnisse</b>. Konflikte entstehen meist nicht durch die Bedürfnisse selbst, sondern durch die Strategien, mit denen wir sie erfüllen wollen.</p>
+      <div class="formula"><em>Wenn ich …</em> sehe / höre (Beobachtung),<br><em>fühle ich mich …</em> (Gefühl),<br><em>weil mir … wichtig ist.</em> (Bedürfnis)<br><em>Wärst du bereit, …?</em> (Bitte)</div>`})),
     card('Zwei Richtungen + eine nach innen',null,h('div',{class:'prose',html:`
       <ul><li><b>Ehrlich ausdrücken:</b> sagen, was in mir lebendig ist und was ich mir wünsche.</li>
       <li><b>Empathisch zuhören:</b> hören, was im anderen lebendig ist – hinter den Worten nach Gefühl und Bedürfnis suchen.</li>
@@ -1022,41 +1094,56 @@ function gfkLists(){
       h('div',{class:'pseudo'},GF.pseudo.map(([p,f,n])=>h('div',{html:`<b>${esc(p)}</b> → ${esc(f)}<br><span class="faint">Bedürfnis: ${esc(n)}</span>`}))))
   ];
 }
+function catPicker(key,sections,sel,cls,onToggle,extraKind){
+  const open=S.cats[key];S.data.gfkExtra=S.data.gfkExtra||{feel:[],need:[]};
+  const extras=live(S.data.gfkExtra[extraKind]).map(x=>x.name);
+  const allGroups=[...sections.flatMap(s2=>s2[1]),['＋ Eigene',extras]];
+  const gchip=([g,words])=>{const n=words.filter(w=>sel.includes(w)).length;
+    return h('button',{class:`chip sm ${open===g?'on':''} ${n&&open!==g?'on '+cls:''}`,onclick:()=>{S.cats[key]=open===g?null:g;rr()}},g,n?h('span',{class:'n'},n):null)};
+  const grp=allGroups.find(x=>x[0]===open);
+  return h('div',null,
+    sections.map(([title,groups])=>[title?h('div',{class:'small faint',style:'margin:6px 0 4px'},title):null,h('div',{class:'chips'},groups.map(gchip),title===sections[sections.length-1][0]?gchip(['＋ Eigene',extras]):null)]),
+    grp&&h('div',{class:'npanel'},
+      grp[1].length?h('div',{class:'chips'},grp[1].map(w=>chip(w,sel.includes(w),()=>onToggle(w),'sm '+cls))):null,
+      adder(open==='＋ Eigene'?'Eigenes hinzufügen …':'Fehlt etwas? Eigenes hinzufügen …',t=>{
+        if(!S.data.gfkExtra[extraKind].some(x=>x.name.toLowerCase()===t.toLowerCase()&&!x.del))S.data.gfkExtra[extraKind].push({id:uid(),name:t,u:now()});
+        touch();if(!sel.includes(t))onToggle(t);else rr()})),
+    sel.length?h('div',{class:'small muted mt'},'Gewählt: ',sel.join(', ')):null);
+}
+const feelSections=pos=>pos===false?[[null,Object.entries(GF.unerfuellt)]]:[['unangenehm',Object.entries(GF.unerfuellt)],['angenehm',Object.entries(GF.erfuellt)]];
+const needSections=()=>[[null,[['Deine',live(S.data.needs).map(n=>n.name)],...Object.entries(GF.beduerfnisse)]]];
 function allFeel(){return Object.values(GF.unerfuellt).flat().concat(Object.values(GF.erfuellt).flat())}
 function allNeeds(){const own=live(S.data.needs).map(n=>n.name);return [...new Set([...own,...Object.values(GF.beduerfnisse).flat()])]}
 function gfkPractice(){
   return [miniCheck(),selfEmpathy(),prepTalk(),exerciseCard(false)];
 }
 function miniCheck(){
-  const M=S.mini;const fe=allFeel(),ne=allNeeds();
+  const M=S.mini;
   const sentence=(M.feel.length||M.need.length)?`Ich bin gerade ${M.feel.join(' und ')||'…'}, weil mir ${M.need.join(' und ')||'…'} wichtig ist.`:'';
   return h('div',{class:'card'},h('details',{class:'acc',open:M.open?true:null,ontoggle:e=>M.open=e.target.open},
     h('summary',null,'⏱️ Mini-Check (30 Sekunden)'),
-    h('p',{class:'sub'},'Was fühle ich gerade? Was brauche ich? Mehr nicht.'),
-    h('label',{class:'lbl'},'Gefühl'),h('div',{class:'chips'},(M.allF?fe:fe.filter((_,i)=>i%2===0)).map(f=>chip(f,M.feel.includes(f),()=>{M.feel=toggle(M.feel,f);rr()},'sm lilac'))),
-    h('button',{class:'link',onclick:()=>{M.allF=!M.allF;rr()}},M.allF?'weniger':'mehr Gefühle'),
-    h('label',{class:'lbl'},'Bedürfnis'),h('div',{class:'chips'},(M.allN?ne:ne.slice(0,12)).map(n=>chip(n,M.need.includes(n),()=>{M.need=toggle(M.need,n);rr()},'sm moss'))),
-    h('button',{class:'link',onclick:()=>{M.allN=!M.allN;rr()}},M.allN?'weniger':'mehr Bedürfnisse'),
+    h('p',{class:'sub'},'Was fühle ich gerade? Was brauche ich? Erst Kategorie antippen, dann das Wort.'),
+    h('label',{class:'lbl'},'Gefühl'),catPicker('miniF',feelSections(),M.feel,'lilac',f=>{M.feel=toggle(M.feel,f);rr()},'feel'),
+    h('label',{class:'lbl'},'Bedürfnis'),catPicker('miniN',needSections(),M.need,'moss',n=>{M.need=toggle(M.need,n);rr()},'need'),
     sentence&&h('div',{class:'gfk-prev'},sentence),
-    sentence&&h('button',{class:'btn sm mt',onclick:()=>{const x=getDay(today());x.checks.push({id:uid(),type:'mini',text:sentence,t:now()});touch(x);S.mini={feel:[],need:[],open:true};rr();toast('Im Tagebuch gespeichert ✓')}},'Im Tagebuch speichern')));
+    sentence&&h('button',{class:'btn sm mt',onclick:()=>{const x=getDay(today());x.checks.push({id:uid(),type:'mini',text:sentence,t:now()});touch(x);S.mini={feel:[],need:[],open:true};S.cats.miniF=S.cats.miniN=null;rr();toast('Im Tagebuch gespeichert ✓')}},'Im Tagebuch speichern')));
 }
 function selfEmpathy(){
   const open=!!S.se;const E=S.se||{};
   const F=(k,ph,rows)=>h('textarea',{class:'field',rows:rows||2,placeholder:ph,value:E[k]||'',oninput:e=>{S.se=S.se||{};S.se[k]=e.target.value}});
-  const fe=Object.values(GF.unerfuellt).flat(),ne=allNeeds();
   return h('div',{class:'card'},h('details',{class:'acc',open:open||null,ontoggle:e=>{if(e.target.open&&!S.se)S.se={};if(!e.target.open)S.se=null}},
     h('summary',null,'🫶 Selbstempathie nach dem Nachgeben'),
     h('p',{class:'sub'},'Zwei Minuten für dich – ohne Urteil.'),
     h('label',{class:'lbl'},'1 · Was ist passiert? (nur Beobachtung)'),F('obs','Wir haben …'),
     h('label',{class:'lbl'},'2 · Was sagt die strenge Stimme in mir? (darf raus)'),F('critic','„Ich hätte …“'),
-    h('label',{class:'lbl'},'3 · Was fühle ich darunter?'),h('div',{class:'chips'},fe.map(f=>chip(f,(E.feel||[]).includes(f),()=>{S.se.feel=toggle(S.se.feel,f);rr()},'sm lilac'))),
-    h('label',{class:'lbl'},'4 · Welches Bedürfnis kam zu kurz?'),h('div',{class:'chips'},ne.slice(0,18).map(n=>chip(n,(E.need||[]).includes(n),()=>{S.se.need=toggle(S.se.need,n);rr()},'sm moss'))),
+    h('label',{class:'lbl'},'3 · Was fühle ich darunter?'),catPicker('seF',feelSections(false),E.feel||[],'lilac',f=>{S.se.feel=toggle(S.se.feel,f);rr()},'feel'),
+    h('label',{class:'lbl'},'4 · Welches Bedürfnis kam zu kurz?'),catPicker('seN',needSections(),E.need||[],'moss',n=>{S.se.need=toggle(S.se.need,n);rr()},'need'),
     h('label',{class:'lbl'},'5 · Was kann ich mir jetzt geben – oder was sage ich nächstes Mal?'),F('next','…'),
     (E.feel||[]).length||(E.need||[]).length?h('div',{class:'gfk-prev'},`Ich bin ${(E.feel||[]).join(' und ')||'…'}, weil mir ${(E.need||[]).join(' und ')||'…'} wichtig ist. Das ist okay – und es zählt.`):null,
     h('button',{class:'btn sm mt',onclick:()=>{
       const t=[E.obs&&'Passiert: '+E.obs,(E.feel||[]).length&&'Gefühl: '+E.feel.join(', '),(E.need||[]).length&&'Bedürfnis: '+E.need.join(', '),E.next&&'Nächstes Mal / jetzt: '+E.next].filter(Boolean).join(' · ');
       if(!t){toast('Noch leer');return}
-      const x=getDay(today());x.checks.push({id:uid(),type:'se',text:t,t:now()});touch(x);S.se=null;rr();toast('Gespeichert ✓')}},'Im Tagebuch speichern')));
+      const x=getDay(today());x.checks.push({id:uid(),type:'se',text:t,t:now()});touch(x);S.se=null;S.cats.seF=S.cats.seN=null;rr();toast('Gespeichert ✓')}},'Im Tagebuch speichern')));
 }
 function prepTalk(){
   const P=S.prep;
@@ -1073,7 +1160,7 @@ function prepTalk(){
     F('planb','Wenn ein Nein kommt: welche andere Strategie gäbe es?','z. B. anderer Tag'),
     h('button',{class:'btn sm mt',onclick:()=>{const s=gfkSentence(P);if(!s){toast('Noch leer');return}
       const extra=[P.other&&'Die andere Seite braucht vielleicht: '+P.other,P.planb&&'Plan B: '+P.planb].filter(Boolean).join(' · ');
-      S.data.talk.push({id:uid(),text:s+(extra?' ('+extra+')':''),done:false,u:now()});touch();S.prep={};S.ichTab='gespraech';go('ich');toast('Zu den Gesprächsnotizen hinzugefügt ✓')}},'Zu Gesprächsnotizen hinzufügen')));
+      const x=getDay(today());x.checks.push({id:uid(),type:'prep',text:s+(extra?' ('+extra+')':''),t:now()});touch(x);S.prep={};rr();toast('Im Tagebuch gespeichert ✓')}},'Im Tagebuch speichern')));
 }
 
 /* ---------- EINSTELLUNGEN ---------- */
@@ -1094,18 +1181,14 @@ async function importJson(j){
   const D=S.data;
   if(j.profile)D.profile={...D.profile,...j.profile};
   if(j.needs){
-    const untouched=!Object.keys(D.days).length&&!D.logs.length;
-    if(untouched)D.needs=[];
     j.needs.forEach(n=>{const ex=D.needs.find(x=>x.name===n.name);if(ex){ex.icon=n.icon||ex.icon;ex.u=now()}else D.needs.push({id:uid(),name:n.name,icon:n.icon||'',u:now()})});
     j.needs.forEach(n=>(n.activities||[]).forEach(t=>{const nd=D.needs.find(x=>x.name===n.name);const list=D.activities[nd.id]=D.activities[nd.id]||[];
       if(!list.some(a=>a.id===t.toLowerCase()))list.push({id:t.toLowerCase(),text:t,n:0,last:null,u:now()})}));
   }
-  const fresh=!Object.keys(D.days).length&&!D.logs.length;
-  ['signals','feelings','contexts','people'].forEach(k=>{if(j[k]){if(fresh)D[k]=[];j[k].forEach(t=>addToList(k,t))}});
+  ['signals','feelings','contexts','people'].forEach(k=>{if(j[k])j[k].forEach(t=>addToList(k,t))});
   (j.affirmations||[]).forEach(t=>{if(!D.affirmations.some(a=>a.text===t&&!a.del))D.affirmations.push({id:uid(),text:t,u:now()})});
-  (j.talk||[]).forEach(t=>{if(!D.talk.some(a=>a.text===t&&!a.del))D.talk.push({id:uid(),text:t,done:false,u:now()})});
   if(j.blocks&&j.blocks.length){const w=getWeek(isoWeek(today()));j.blocks.forEach(b=>{if(!w.blocks.some(x=>x.what===b.what))w.blocks.push({id:uid(),day:b.day,time:b.time||'',dur:b.dur||'',what:b.what,need:(D.needs.find(n=>n.name===b.need)||{}).id||null,status:'offen',u:now()})})}
-  D.imported=true;touch();rr();toast('Startdaten importiert ✓ – die Datei kannst du jetzt löschen');
+  D.imported=true;cleanup();touch();rr();toast('Startdaten importiert ✓ – die Datei kannst du jetzt löschen');
 }
 function listEditor(key,title,withIcon){
   const items=live(S.data[key]);
@@ -1136,8 +1219,7 @@ function vSettings(){
           S.dirty=true;await syncNow(true);rr()}},'Speichern & verbinden'),
         hasRemote()&&h('button',{class:'link mt',style:'color:var(--rose)',onclick:()=>{CFG.owner='';CFG.repo='';CFG.tokenEnv=null;S.token=null;saveCfg();setSync('off');rr()}},'Sync auf diesem Gerät trennen'))),
     card('Persönliches',null,
-      h('label',{class:'lbl'},'Dein Name (für die Begrüßung)'),h('input',{class:'field',value:S.data.profile.name||'',oninput:e=>{S.data.profile.name=e.target.value;touch()}}),
-      h('label',{class:'lbl'},'Name der Person für Gesprächsnotizen'),h('input',{class:'field',value:S.data.profile.partner||'',oninput:e=>{S.data.profile.partner=e.target.value;touch()}})),
+      h('label',{class:'lbl'},'Dein Name (für die Begrüßung)'),h('input',{class:'field',value:S.data.profile.name||'',oninput:e=>{S.data.profile.name=e.target.value;touch()}})),
     card('Deine Listen','Umbenennen, Emoji ändern, ergänzen.',
       listEditor('needs','Kernbedürfnisse',true),listEditor('signals','Körpersignale'),listEditor('feelings','Gefühle im Log'),
       listEditor('contexts','Bereiche im Log'),listEditor('people','Beteiligte im Log')),
