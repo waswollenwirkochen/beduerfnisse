@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://api.github.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self' https://api.github.com; img-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#0b1419">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -13,7 +13,8 @@
 <meta name="apple-mobile-web-app-title" content="Bedürfnisse">
 <title>Bedürfnis-Diary</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1d22'/%3E%3Ccircle cx='44' cy='18' r='8' fill='%23e9b872'/%3E%3Ccircle cx='48' cy='15' r='7' fill='%230f1d22'/%3E%3Cpath d='M20 52 L30 30 L40 52Z M8 54 L18 36 L28 54Z M34 54 L44 38 L56 54Z' fill='%2393b48b'/%3E%3C/svg%3E">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230f1d22'/%3E%3Ccircle cx='44' cy='18' r='8' fill='%23e9b872'/%3E%3Ccircle cx='48' cy='15' r='7' fill='%230f1d22'/%3E%3Cpath d='M20 52 L30 30 L40 52Z M8 54 L18 36 L28 54Z M34 54 L44 38 L56 54Z' fill='%2393b48b'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 <style>
 :root{
   --bg:#0b1419; --card:rgba(22,34,36,.78); --card2:rgba(34,50,50,.7);
@@ -1235,6 +1236,7 @@ function vSettings(){
   const pw={old:'',n1:'',n2:''};const pwErr=h('div',{class:'err'});
   const last=S.sync.last?new Date(S.sync.last).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'–';
   return [
+    installCard(),
     card('Sync',null,
       h('div',{class:'row'},h('span',{class:'dot '+S.sync.state}),h('span',{class:'small'},syncLabel())),
       hasRemote()&&h('div',{class:'small faint mt'},`${CFG.owner}/${CFG.repo} · zuletzt ${last}`),
@@ -1278,6 +1280,19 @@ function vSettings(){
       h('button',{class:'btn danger full',onclick:()=>{if(confirm('Alle lokalen Daten auf diesem Gerät löschen? Was auf GitHub liegt, bleibt erhalten.')){localStorage.removeItem(LS_VAULT);localStorage.removeItem(LS_CFG);CFG=null;S.key=null;S.data=null;S.token=null;render()}}},'Lokale Daten löschen')),
     h('p',{class:'center faint small'},'Verschlüsselung: AES-256-GCM · PBKDF2-SHA256 ('+(CFG.iter||ITER).toLocaleString('de-DE')+' Runden) · keine externen Anfragen außer api.github.com')
   ];
+}
+
+/* ---------- App-Installation ---------- */
+let installEvt=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;if(S.view==='settings'&&S.key)render()});
+addEventListener('appinstalled',()=>{installEvt=null;toast('Als App installiert ✓')});
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(e=>console.warn(e));
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+function installCard(){
+  if(isStandalone())return null;
+  return card('📲 Als App nutzen','Dann startet das Tagebuch wie eine App – ohne Browserleiste, mit eigenem Symbol und auch offline.',
+    installEvt?h('button',{class:'btn full',onclick:async()=>{installEvt.prompt();const r=await installEvt.userChoice;installEvt=null;render();if(r.outcome==='accepted')toast('Wird installiert …')}},'App installieren')
+    :h('p',{class:'small muted mb0'},'Im Browser-Menü (⋮ oben rechts) auf „App installieren“ oder „Zum Startbildschirm hinzufügen“ tippen. Auf dem iPhone: Teilen-Symbol → „Zum Home-Bildschirm“.'));
 }
 
 /* ---------- Start ---------- */
