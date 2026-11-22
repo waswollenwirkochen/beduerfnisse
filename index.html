@@ -184,6 +184,11 @@ details.acc[open] summary::after{content:"－"}
 .pseudo{display:grid;grid-template-columns:1fr;gap:6px}
 .pseudo div{background:rgba(0,0,0,.2);border-radius:10px;padding:8px 10px;font-size:.88rem}
 .pseudo b{color:var(--rose)}
+.logcard{cursor:pointer;padding:12px 14px 12px 16px;border-left:4px solid var(--line)}
+.logcard.moss{border-left-color:var(--moss);background:linear-gradient(90deg,rgba(147,180,139,.10),transparent 45%),var(--card)}
+.logcard.rose{border-left-color:var(--rose);background:linear-gradient(90deg,rgba(227,156,143,.10),transparent 45%),var(--card)}
+.logcard .meta{margin-bottom:4px}
+.logcard:active{filter:brightness(1.1)}
 .streak{display:inline-flex;align-items:center;gap:6px;background:rgba(233,184,114,.12);border:1px solid rgba(233,184,114,.35);border-radius:999px;padding:4px 11px;font-size:.82rem;color:var(--amber2)}
 
 /* lock */
@@ -764,9 +769,9 @@ function vLog(){
     h('div',{class:'card'},h('div',{class:'kpis'},kpi(l30.filter(l=>l.type==='eingestanden').length,'eingestanden (30 T.)'),kpi(l30.filter(l=>l.type==='nachgegeben').length,'nachgegeben (30 T.)'),
       h('button',{class:'kpi',onclick:()=>{S.gfkTab='ueben';S.se={};go('gfk')}},h('div',{class:'v'},'🫶'),h('div',{class:'l'},'Selbst­empathie')))),
     all.length?h('div',{class:'seg'},[['alle','Alle'],['eingestanden','Eingestanden'],['nachgegeben','Nachgegeben']].map(([k,l])=>h('button',{class:f===k?'on':'',onclick:()=>{S.logFilter=k;rr()}},l))):null,
-    logs.length?card(null,null,logs.map(l=>{
+    logs.length?h('div',null,logs.map(l=>{
       const n=needById(l.need);const t=LT[l.type]||LT.nachgegeben;
-      return h('div',{class:'item',style:'cursor:pointer',onclick:()=>{S.logDraft=clone(l);rr();scrollTo(0,0)}},
+      return h('div',{class:'card logcard '+t.cls,onclick:()=>{S.logDraft=clone(l);rr();scrollTo(0,0)}},
         h('div',{class:'meta'},h('span',{style:`color:var(--${t.cls})`},t.icon+' '+t.label),' · ',fmtShort(l.date),[...l.ctx.map(id=>nm('contexts',id)),...l.people.map(id=>nm('people',id))].map(x=>' · '+x).join('')),
         h('div',null,n?needLabel(n):'',l.what?(n?' – ':'')+l.what:''),
         l.thought&&h('div',{class:'small muted'},'„'+l.thought+'“'),
