@@ -1332,8 +1332,9 @@ async function enablePush(){
   try{
     const perm=await Notification.requestPermission();if(perm!=='granted'){toast('Benachrichtigungen wurden nicht erlaubt');return}
     const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
-    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64uToU8(VAPID_PUBLIC)});
-    S.pushSub=JSON.stringify(sub);render();toast('Aktiviert – jetzt noch den Code speichern');
+    if(sub)await sub.unsubscribe();
+    sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64uToU8(VAPID_PUBLIC)});
+    S.pushSub=JSON.stringify(sub);render();toast('Neuer Code erstellt – jetzt als Secret speichern');
   }catch(e){toast('Fehler: '+(e.message||e))}
 }
 function pushCard(){

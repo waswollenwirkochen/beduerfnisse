@@ -35,7 +35,8 @@ if (!manual) {
 if (!process.env.PUSH_SUBSCRIPTION || !process.env.VAPID_PRIVATE_KEY) {
   console.error('Secrets PUSH_SUBSCRIPTION und/oder VAPID_PRIVATE_KEY fehlen.'); process.exit(1);
 }
-let subs = JSON.parse(process.env.PUSH_SUBSCRIPTION);
+let subs;
+try { subs = JSON.parse(process.env.PUSH_SUBSCRIPTION.trim()); } catch (e) { console.error('PUSH_SUBSCRIPTION ist kein gültiger Code – bitte komplett neu kopieren.'); process.exit(1); }
 if (!Array.isArray(subs)) subs = [subs];
 
 webpush.setVapidDetails('mailto:waswollenwirkochen@users.noreply.github.com', VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
@@ -47,8 +48,10 @@ for (const sub of subs) {
     console.log('Gesendet:', body);
   } catch (e) {
     failed++;
-    if (e.statusCode === 404 || e.statusCode === 410) console.error('Abo abgelaufen – in der App unter ⚙︎ die Erinnerung neu aktivieren und den Code erneut als Secret speichern.');
-    else console.error('Fehler beim Senden:', e.statusCode || '', e.body || e.message);
+    let host = '?'; try { host = new URL(sub.endpoint).host; } catch (_) {}
+    console.error(`Fehler beim Senden an ${host}: Status ${e.statusCode || '-'} | ${String(e.body || e.message).slice(0, 300)}`);
+    if (e.statusCode === 404 || e.statusCode === 410) console.error('→ Das Abo ist ungültig/abgelaufen: In der App unter ⚙︎ „Erinnerung neu verbinden“ tippen und den neuen Code als Secret PUSH_SUBSCRIPTION speichern.');
+    if (e.statusCode === 403) console.error('→ Schlüssel passt nicht: Secret VAPID_PRIVATE_KEY prüfen.');
   }
 }
 if (failed === subs.length) process.exit(1);
