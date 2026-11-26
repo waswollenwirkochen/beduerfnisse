@@ -1,7 +1,7 @@
 // Bedürfnis-Diary – Service Worker: macht die App installierbar und offline nutzbar.
 // Speichert nur die App-Dateien, niemals Tagebuch-Daten oder GitHub-Anfragen.
-const CACHE = 'bd-app-v1';
-const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
+const CACHE = 'bd-app-v2';
+const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png', './badge-96.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
@@ -19,4 +19,21 @@ self.addEventListener('fetch', e => {
     return;
   }
   e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+});
+
+// Abend-Erinnerung (Push über GitHub Actions)
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data && e.data.text() }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Bedürfnis-Diary', {
+    body: d.body || 'Zeit für deinen Abend-Check-in 🌙',
+    icon: 'icon-192.png', badge: 'badge-96.png', tag: 'abend-checkin', renotify: true, data: { url: './' }
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
+    for (const c of cs) { if ('focus' in c) return c.focus(); }
+    return self.clients.openWindow('./');
+  }));
 });

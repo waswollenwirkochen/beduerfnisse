@@ -1,0 +1,36 @@
+name: Abend-Erinnerung
+
+# Läuft zweimal (18:25 und 19:25 UTC), damit es im Winter und im Sommer passt.
+# Das Skript lässt nur den Lauf durch, der in Berlin auf 20:25 Uhr fällt,
+# und wartet dann zufällig 0–60 Minuten.
+on:
+  schedule:
+    - cron: '25 18 * * *'
+    - cron: '25 19 * * *'
+  workflow_dispatch:   # zum Testen: Actions → Abend-Erinnerung → Run workflow (sendet sofort)
+
+permissions:
+  contents: read
+
+jobs:
+  erinnern:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: web-push installieren
+        working-directory: .github/scripts
+        run: npm install --no-save --no-audit --no-fund web-push@3
+      - name: Erinnerung senden
+        working-directory: .github/scripts
+        run: node erinnerung.mjs
+        env:
+          PUSH_SUBSCRIPTION: ${{ secrets.PUSH_SUBSCRIPTION }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          SCHEDULE: ${{ github.event.schedule }}
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' }}

@@ -1264,6 +1264,7 @@ function vSettings(){
   const last=S.sync.last?new Date(S.sync.last).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'–';
   return [
     installCard(),
+    pushCard(),
     card('Sync',null,
       h('div',{class:'row'},h('span',{class:'dot '+S.sync.state}),h('span',{class:'small'},syncLabel())),
       hasRemote()&&h('div',{class:'small faint mt'},`${CFG.owner}/${CFG.repo} · zuletzt ${last}`),
@@ -1320,6 +1321,42 @@ function installCard(){
   return card('📲 Als App nutzen','Dann startet das Tagebuch wie eine App – ohne Browserleiste, mit eigenem Symbol und auch offline.',
     installEvt?h('button',{class:'btn full',onclick:async()=>{installEvt.prompt();const r=await installEvt.userChoice;installEvt=null;render();if(r.outcome==='accepted')toast('Wird installiert …')}},'App installieren')
     :h('p',{class:'small muted mb0'},'Im Browser-Menü (⋮ oben rechts) auf „App installieren“ oder „Zum Startbildschirm hinzufügen“ tippen. Auf dem iPhone: Teilen-Symbol → „Zum Home-Bildschirm“.'));
+}
+
+/* ---------- Abend-Erinnerung (Push) ---------- */
+const VAPID_PUBLIC='BD44RR5y0UlGAMQAirPD8RvpxMtok67YuX3NzFDIFFvcEpY4Frri-gFR1dqCbWBQcNDWpXlOAskgmGcHPppnzwU';
+const pushOk=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window&&(location.protocol==='https:'||location.hostname==='localhost');
+function b64uToU8(x){x=x.replace(/-/g,'+').replace(/_/g,'/');while(x.length%4)x+='=';return unb64(x)}
+async function loadPushSub(){try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();S.pushSub=sub?JSON.stringify(sub):null}catch(e){S.pushSub=null}if(S.view==='settings')render()}
+async function enablePush(){
+  try{
+    const perm=await Notification.requestPermission();if(perm!=='granted'){toast('Benachrichtigungen wurden nicht erlaubt');return}
+    const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64uToU8(VAPID_PUBLIC)});
+    S.pushSub=JSON.stringify(sub);render();toast('Aktiviert – jetzt noch den Code speichern');
+  }catch(e){toast('Fehler: '+(e.message||e))}
+}
+function pushCard(){
+  if(!pushOk())return card('🔔 Abend-Erinnerung',null,h('p',{class:'small muted mb0'},'Öffne das Tagebuch als installierte App (oder in Chrome), um die Erinnerung zu aktivieren.'));
+  if(S.pushSub===undefined){S.pushSub=null;loadPushSub()}
+  const owner=location.hostname.split('.')[0],repo=location.pathname.split('/').filter(Boolean)[0]||'beduerfnisse';
+  const secretsUrl=`https://github.com/${owner}/${repo}/settings/secrets/actions/new`;
+  const actionsUrl=`https://github.com/${owner}/${repo}/actions/workflows/erinnerung.yml`;
+  const granted=Notification.permission==='granted';
+  return card('🔔 Abend-Erinnerung','Jeden Abend zu einer etwas anderen Zeit (ungefähr zwischen 20:30 und 22 Uhr) eine kurze Nachricht – antippen öffnet den Check-in.',
+    h('button',{class:'btn full'+(S.pushSub&&granted?' ghost':''),onclick:enablePush},S.pushSub&&granted?'Erinnerung neu verbinden':'Erinnerung aktivieren'),
+    S.pushSub&&granted&&[
+      h('h3',null,'Einmalig: Code auf GitHub speichern'),
+      h('ol',{class:'small',style:'padding-left:18px;margin:0 0 8px'},
+        h('li',null,'Code kopieren:'),
+      ),
+      h('textarea',{class:'field',rows:3,readonly:true,style:'font-size:.72rem;font-family:monospace',value:S.pushSub,onclick:e=>e.target.select()}),
+      h('button',{class:'btn ghost sm mt',onclick:async()=>{try{await navigator.clipboard.writeText(S.pushSub);toast('Kopiert ✓')}catch(e){toast('Bitte manuell markieren & kopieren')}}},'📋 Code kopieren'),
+      h('ol',{class:'small',start:'2',style:'padding-left:18px;margin:10px 0 0'},
+        h('li',null,h('a',{href:secretsUrl,target:'_blank',rel:'noopener'},'GitHub-Secrets öffnen'),' → Name: ',h('b',null,'PUSH_SUBSCRIPTION'),', Code einfügen → „Add secret“.'),
+        h('li',null,'Testen: ',h('a',{href:actionsUrl,target:'_blank',rel:'noopener'},'Abend-Erinnerung'),' → „Run workflow“ – die Nachricht kommt dann sofort.')),
+      h('p',{class:'small faint mt'},'Wenn du die Erinnerung neu verbindest oder ein anderes Gerät nutzt, musst du den Code dort erneut speichern.'),
+      h('button',{class:'link',onclick:async()=>{const reg=await navigator.serviceWorker.ready;reg.showNotification('Bedürfnis-Diary',{body:'So sieht deine Abend-Erinnerung aus 🌙',icon:'icon-192.png',badge:'badge-96.png',tag:'abend-checkin'})}},'Vorschau-Benachrichtigung zeigen')]);
 }
 
 /* ---------- Start ---------- */
